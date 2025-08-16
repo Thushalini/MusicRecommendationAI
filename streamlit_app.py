@@ -14,7 +14,7 @@ st.title("🎵 Playlist Builder AI")
 st.markdown("Generate mood-based playlists with AI assistance 🎶")
 
 # ----------------------------
-# Mock agent output
+# Mock agent output for testing
 # ----------------------------
 mock_agent_output = {
     "mood": "happy",
@@ -46,10 +46,11 @@ with st.sidebar:
     build_btn = st.button("Build Playlists")
 
 # ----------------------------
-# Generate 3 Playlists
+# Build 3 Playlists Logic
 # ----------------------------
 if build_btn:
     total_limit = int(limit or mock_agent_output["limit"])
+
     agent_data = {
         "mood": mood or mock_agent_output["mood"],
         "genre": genre or mock_agent_output["genre"],
@@ -58,42 +59,48 @@ if build_btn:
         "limit": total_limit
     }
 
-    # Sanitize inputs
-    agent_data = {k: html.escape(str(v)) for k, v in agent_data.items()}
+    # Sanitize string inputs
+    agent_data = {k: html.escape(str(v)) if isinstance(v, str) else v for k, v in agent_data.items()}
 
+    playlists_all = []
+
+    # Generate 3 playlists and store data
     for i in range(1, 4):
-        # Container for each playlist
-        with st.container():
-            with st.expander(f"🎵 Playlist #{i} (click to view tracks)", expanded=False):
-                # Get seed artists
-                seeds = search_artists(agent_data["genre"], agent_data["market"], limit=5)
-                seed_ids = [s["id"] for s in seeds]
+        # Get seed artists
+        seeds = search_artists(agent_data["genre"], agent_data["market"], limit=5)
 
-                # Mood & context targets
-                targets = mood_targets(agent_data["mood"], agent_data["context"])
-                sp_targets = {k: v for k, v in targets.items() if isinstance(v, (int, float)) or "tempo" in k}
+        # Mood & context targets
+        targets = mood_targets(agent_data["mood"], agent_data["context"])
 
-                # Generate playlist
-                playlist_data = generate_playlist_by_genre(
-                    agent_data["genre"],
-                    agent_data["market"],
-                    per_artist_limit=5,
-                    total_limit=total_limit
-                )
+        # Generate playlist
+        playlist_data = generate_playlist_by_genre(
+            agent_data["genre"],
+            agent_data["market"],
+            per_artist_limit=5,
+            total_limit=total_limit
+        )
 
-                if not playlist_data:
-                    st.warning("No tracks found for this genre/mood.")
-                    continue
+        if not playlist_data:
+            playlists_all.append(None)
+            continue
 
-                # Score and rank tracks
-                feats_map = {t["track"]["id"]: t["features"] for t in playlist_data}
-                scores = score_tracks(targets, feats_map)
-                ranked = sorted(
-                    playlist_data,
-                    key=lambda t: scores.get(t["track"]["id"], 0.0),
-                    reverse=True
-                )[:total_limit]
+        # Score and rank tracks
+        feats_map = {t["track"]["id"]: t["features"] for t in playlist_data}
+        scores = score_tracks(targets, feats_map)
+        ranked = sorted(
+            playlist_data,
+            key=lambda t: scores.get(t["track"]["id"], 0.0),
+            reverse=True
+        )[:total_limit]
 
+        playlists_all.append(ranked)
+
+    # ----------------------------
+    # Display playlists as expanders
+    # ----------------------------
+    for i, ranked in enumerate(playlists_all, start=1):
+        if ranked:
+            with st.expander(f"🎵 Playlist #{i}"):
                 # Playlist description
                 description = generate_playlist_description(
                     agent_data["mood"],
@@ -102,7 +109,7 @@ if build_btn:
                 )
                 st.info(description)
 
-                # Display tracks
+                # Display tracks inside this playlist
                 for t in ranked:
                     track = t["track"]
                     f = t["features"]
@@ -115,5 +122,5 @@ if build_btn:
                             st.markdown(f"**Reason:** {reason_string(f)}")
                         with col2:
                             st.markdown(f"[Listen on Spotify]({spotify_url})")
-
-                st.success(f"✅ Playlist #{i} generated! Total tracks: {len(ranked)}")
+        else:
+            st.warning(f"No tracks found for Playlist #{i}.")
