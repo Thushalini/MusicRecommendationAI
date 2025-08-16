@@ -1,40 +1,111 @@
 import streamlit as st
-from app.spotify import search_artists, audio_features, generate_playlist_by_genre
+from app.spotify import search_artists, generate_playlist_by_genre, audio_features
 from app.ranking import mood_targets, score_tracks, reason_string
+from app.llm_helper import generate_playlist_description
+
+st.set_page_config(
+    page_title="🎵 Playlist Builder AI",
+    page_icon="🎧",
+    layout="wide"
+)
 
 st.title("🎵 Playlist Builder AI")
+st.markdown("Generate mood-based playlists with AI assistance 🎶")
 
-mood = st.selectbox("Mood", ["happy","sad","energetic","chill","focus","romantic","angry","calm"])
-genre = st.text_input("Genre", "tamil")
-context = st.selectbox("Context", ["workout","study","party","relax","commute","sleep"])
-limit = st.slider("Number of tracks", 5, 50, 20)
-market = st.text_input("Market", "IN")
+# ----------------------------
+# Mock agent output for testing
+# ----------------------------
+mock_agent_output = {
+    "mood": "happy",
+    "genre": "tamil",
+    "context": "workout",
+    "market": "IN",
+    "limit": 20
+}
 
-if st.button("Build Playlist"):
-    # Generate playlist based on genre
-    playlist_data = generate_playlist_by_genre(genre, market, per_artist_limit=5, total_limit=limit)
+# ----------------------------
+# User Inputs Sidebar
+# ----------------------------
+with st.sidebar:
+    st.header("🎛️ Playlist Settings")
+    mood = st.selectbox(
+        "Mood",
+        ["happy","sad","energetic","chill","focus","romantic","angry","calm"],
+        index=0
+    )
+    genre = st.text_input("Genre", "tamil")
+    context = st.selectbox(
+        "Context",
+        ["workout","study","party","relax","commute","sleep"],
+        index=0
+    )
+    limit = st.slider("Number of tracks", 5, 50, 20)
+    market = st.text_input("Market", "IN")
+    build_btn = st.button("Build Playlist")
+
+# ----------------------------
+# Build Playlist
+# ----------------------------
+if build_btn:
+    agent_data = {
+        "mood": mood or mock_agent_output["mood"],
+        "genre": genre or mock_agent_output["genre"],
+        "context": context or mock_agent_output["context"],
+        "market": market or mock_agent_output["market"],
+        "limit": limit or mock_agent_output["limit"]
+    }
+
+    # Get seed artists
+    seeds = search_artists(agent_data["genre"], agent_data["market"], limit=5)
+    seed_ids = [s["id"] for s in seeds]
+
+    # Mood & context targets
+    targets = mood_targets(agent_data["mood"], agent_data["context"])
+    sp_targets = {k: v for k, v in targets.items() if isinstance(v, (int, float)) or "tempo" in k}
+
+    # Generate playlist
+    playlist_data = generate_playlist_by_genre(
+        agent_data["genre"],
+        agent_data["market"],
+        per_artist_limit=5,
+        total_limit=agent_data["limit"]
+    )
 
     if not playlist_data:
-        st.warning("No tracks found for this genre.")
+        st.warning("No tracks found for this genre/mood.")
     else:
-        # Get mood targets
-        targets = mood_targets(mood, context)
-
         # Score and rank tracks
-        scores = {}
-        for item in playlist_data:
-            f = item["features"]
-            t_id = item["track"]["id"]
-            scores[t_id] = score_tracks(targets, {t_id: f}).get(t_id, 0.0)
+        feats_map = {t["track"]["id"]: t["features"] for t in playlist_data}
+        scores = score_tracks(targets, feats_map)
+        ranked = sorted(
+            playlist_data,
+            key=lambda t: scores.get(t["track"]["id"], 0.0),
+            reverse=True
+        )[:agent_data["limit"]]
 
-        ranked = sorted(playlist_data, key=lambda x: scores.get(x["track"]["id"], 0.0), reverse=True)
+        # Generate playlist description
+        description = generate_playlist_description(
+            agent_data["mood"],
+            agent_data["context"],
+            ranked
+        )
 
-        # Display tracks
-        for item in ranked:
-            t = item["track"]
-            f = item["features"]
-            artist_names = ', '.join([a['name'] for a in t['artists']])
-            spotify_url = t['external_urls']['spotify']
-            st.markdown(f"**{t['name']}** by {artist_names}")
-            st.markdown(f"Reason: {reason_string(f)}")
-            st.markdown(f"[Listen]({spotify_url})\n---")
+        st.markdown("## 🎶 Playlist Overview")
+        st.info(description)
+
+        # Display tracks in columns with expanders
+        st.markdown("## 🔊 Tracks")
+        for t in ranked:
+            track = t["track"]
+            f = t["features"]
+            artist_names = ', '.join([a['name'] for a in track['artists']])
+            spotify_url = track['external_urls']['spotify']
+
+            with st.expander(f"{track['name']} by {artist_names}", expanded=False):
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.markdown(f"**Reason:** {reason_string(f)}")
+                with col2:
+                    st.markdown(f"[Listen]({spotify_url})")
+
+        st.success(f"✅ Playlist generated! Total tracks: {len(ranked)}")

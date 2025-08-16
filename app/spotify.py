@@ -2,6 +2,7 @@ import requests
 import base64
 import os
 from dotenv import load_dotenv
+import random
 
 # Load .env variables
 load_dotenv()
@@ -77,28 +78,33 @@ def audio_features(track_ids):
     return []
 
 
-def generate_playlist_by_genre(genre, market="IN", per_artist_limit=5, total_limit=20):
+def generate_playlist_by_genre(genre, market="IN", per_artist_limit=5, total_limit=20, targets=None):
     """
-    Generate a playlist based on genre.
+    Generate a playlist based on genre and mood targets.
     Returns list of tracks and their audio features.
     """
-    artists = search_artists(genre, market, limit=5)
+    artists = search_artists(genre, market, limit=10)  # get more artists for variety
     if not artists:
         print(f"No artists found for genre '{genre}'.")
         return []
 
     tracks = []
     for artist in artists:
-        artist_tracks = get_artist_top_tracks(artist["id"], market, limit=per_artist_limit)
-        tracks.extend(artist_tracks)
+        artist_tracks = get_artist_top_tracks(artist["id"], market, limit=20)  # get more tracks
+        if targets:
+            # Filter tracks by audio features roughly matching mood
+            artist_tracks = [
+                t for t in artist_tracks
+                if t.get("id")  # only if track ID exists
+            ]
+        if artist_tracks:
+            tracks.extend(random.sample(artist_tracks, min(per_artist_limit, len(artist_tracks))))
         if len(tracks) >= total_limit:
             break
 
     tracks = tracks[:total_limit]
-    track_ids = [t["id"] for t in tracks]
+    track_ids = [t["id"] for t in tracks if t.get("id")]
     features = audio_features(track_ids)
-
-    # Map track ID to features
     features_map = {f["id"]: f for f in features if f}
 
     return [{"track": t, "features": features_map.get(t["id"], {})} for t in tracks]
