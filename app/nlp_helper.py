@@ -1,0 +1,11 @@
+import spacy
+from app.llm_helper import llm
+
+nlp = spacy.load("en_core_web_sm")
+
+def extract_entities(text):
+    doc = nlp(text)
+    return [(ent.text, ent.label_) for ent in doc.ents]
+
+def summarize_playlist(description):
+    return llm.predict(f"Summarize this playlist in 2-3 lines:\n{description}")

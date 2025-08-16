@@ -3,6 +3,7 @@ import base64
 import os
 from dotenv import load_dotenv
 import random
+import html
 
 # Load .env variables
 load_dotenv()
@@ -35,8 +36,9 @@ def sp_get(url, params=None):
         return None
 
 
-def search_artists(query, market="IN", limit=5):
-    """Search for artists by name or genre."""
+def search_artists(query, market="IN", limit=10):
+    """Search for artists by name or genre, sanitize input for security."""
+    query = html.escape(query)  # basic input sanitization
     params = {
         "q": query,
         "type": "artist",
@@ -49,7 +51,7 @@ def search_artists(query, market="IN", limit=5):
     return []
 
 
-def get_artist_top_tracks(artist_id, market="IN", limit=5):
+def get_artist_top_tracks(artist_id, market="IN", limit=20):
     """Fetch top tracks of an artist (via albums) accessible in the market."""
     albums_data = sp_get(f"https://api.spotify.com/v1/artists/{artist_id}/albums", params={"market": market, "limit": 10})
     if not albums_data or "items" not in albums_data:
@@ -80,25 +82,31 @@ def audio_features(track_ids):
 
 def generate_playlist_by_genre(genre, market="IN", per_artist_limit=5, total_limit=20, targets=None):
     """
-    Generate a playlist based on genre and mood targets.
+    Generate a playlist based on genre and optional mood targets.
     Returns list of tracks and their audio features.
     """
-    artists = search_artists(genre, market, limit=10)  # get more artists for variety
+    artists = search_artists(genre, market, limit=15)  # more artists for variety
     if not artists:
         print(f"No artists found for genre '{genre}'.")
         return []
 
     tracks = []
+    used_track_ids = set()  # to avoid duplicates
+
     for artist in artists:
-        artist_tracks = get_artist_top_tracks(artist["id"], market, limit=20)  # get more tracks
+        artist_tracks = get_artist_top_tracks(artist["id"], market, limit=20)
         if targets:
-            # Filter tracks by audio features roughly matching mood
-            artist_tracks = [
-                t for t in artist_tracks
-                if t.get("id")  # only if track ID exists
-            ]
+            # Placeholder: filter by audio features to roughly match mood/energy
+            artist_tracks = [t for t in artist_tracks if t.get("id")]
+
         if artist_tracks:
-            tracks.extend(random.sample(artist_tracks, min(per_artist_limit, len(artist_tracks))))
+            random.shuffle(artist_tracks)
+            for t in artist_tracks:
+                if t["id"] not in used_track_ids:
+                    tracks.append(t)
+                    used_track_ids.add(t["id"])
+                if len(tracks) >= total_limit:
+                    break
         if len(tracks) >= total_limit:
             break
 
@@ -107,4 +115,5 @@ def generate_playlist_by_genre(genre, market="IN", per_artist_limit=5, total_lim
     features = audio_features(track_ids)
     features_map = {f["id"]: f for f in features if f}
 
+    # Return list of dicts with track and features
     return [{"track": t, "features": features_map.get(t["id"], {})} for t in tracks]
