@@ -24,7 +24,6 @@ def get_spotify_token():
 SPOTIFY_TOKEN = get_spotify_token()
 HEADERS = {"Authorization": f"Bearer {SPOTIFY_TOKEN}"}
 
-
 def sp_get(url, params=None):
     """Helper function to GET from Spotify API with error handling."""
     r = requests.get(url, headers=HEADERS, params=params)
@@ -35,10 +34,9 @@ def sp_get(url, params=None):
         print(f"HTTP Error: {e} | URL: {r.url}")
         return None
 
-
 def search_artists(query, market="IN", limit=10):
     """Search for artists by name or genre, sanitize input for security."""
-    query = html.escape(query)  # basic input sanitization
+    query = html.escape(query)
     params = {
         "q": query,
         "type": "artist",
@@ -49,7 +47,6 @@ def search_artists(query, market="IN", limit=10):
     if data and "artists" in data:
         return data["artists"]["items"]
     return []
-
 
 def get_artist_top_tracks(artist_id, market="IN", limit=20):
     """Fetch top tracks of an artist (via albums) accessible in the market."""
@@ -66,7 +63,6 @@ def get_artist_top_tracks(artist_id, market="IN", limit=20):
             break
     return tracks[:limit]
 
-
 def audio_features(track_ids):
     """Get audio features for a list of track IDs."""
     if not track_ids:
@@ -79,25 +75,47 @@ def audio_features(track_ids):
         return data["audio_features"]
     return []
 
-
 def generate_playlist_by_genre(genre, market="IN", per_artist_limit=5, total_limit=20, targets=None):
     """
     Generate a playlist based on genre and optional mood targets.
     Returns list of tracks and their audio features.
     """
-    artists = search_artists(genre, market, limit=15)  # more artists for variety
+    artists = search_artists(genre, market, limit=15)
     if not artists:
         print(f"No artists found for genre '{genre}'.")
         return []
 
     tracks = []
-    used_track_ids = set()  # to avoid duplicates
+    used_track_ids = set()
 
     for artist in artists:
         artist_tracks = get_artist_top_tracks(artist["id"], market, limit=20)
+
         if targets:
-            # Placeholder: filter by audio features to roughly match mood/energy
-            artist_tracks = [t for t in artist_tracks if t.get("id")]
+            # Filter tracks based on audio features to match mood/energy
+            track_ids = [t["id"] for t in artist_tracks if t.get("id")]
+            feats = audio_features(track_ids)
+            feats_map = {f["id"]: f for f in feats if f}
+
+            filtered_tracks = []
+            for t in artist_tracks:
+                tid = t.get("id")
+                if not tid or tid not in feats_map:
+                    continue
+                f = feats_map[tid]
+                score = 0
+                for key in targets:
+                    if key in f:
+                        # Ensure target and feature are on same scale
+                        score += 1 - abs(targets[key] - f[key])
+                if score > 0:  # forgiving threshold
+                    filtered_tracks.append(t)
+
+            if filtered_tracks:
+                artist_tracks = filtered_tracks
+            # Fallback if no tracks passed
+            else:
+                artist_tracks = artist_tracks
 
         if artist_tracks:
             random.shuffle(artist_tracks)
