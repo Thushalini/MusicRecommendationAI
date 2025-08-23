@@ -1,65 +1,115 @@
-from fastapi import FastAPI, HTTPException
+# fastapi_agents.py  (or agents_api.py)
+from typing import Optional, List
+import os
+
+from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from dotenv import load_dotenv, find_dotenv
+
 from app.llm_helper import detect_mood, classify_genre
 
-app = FastAPI(title="Playlist AI Agents", description="Mood and Genre Detection API")
+# ----------------------------------
+# Load env (.env in project folder)
+# ----------------------------------
+load_dotenv(find_dotenv(), override=False)
 
-# ----------------------------
-# Request & Response Models
-# ----------------------------
+# ----------------------------------
+# Security (API key)
+# ----------------------------------
+API_KEY = os.getenv("AGENTS_API_KEY", "dev-key-change-me")
+
+def require_api_key(x_api_key: str = Header(default="")):
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return True
+
+# ----------------------------------
+# App
+# ----------------------------------
+app = FastAPI(
+    title="Playlist Builder – NLP Agent API",
+    version="1.0.0",
+    description="Simple NLP helper service used by the Streamlit UI."
+)
+
+# Allow local Streamlit & optional custom origins from env
+_default_origins: List[str] = [
+    "http://localhost:8501", "http://127.0.0.1:8501",
+    "http://localhost", "http://127.0.0.1"
+]
+_env_origins = os.getenv("AGENTS_CORS_ORIGINS", "").strip()
+allow_origins = (
+    [o.strip() for o in _env_origins.split(",") if o.strip()]
+    if _env_origins else _default_origins
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allow_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ----------------------------------
+# Schemas
+# ----------------------------------
 class TextInput(BaseModel):
     text: str
 
 class MoodResponse(BaseModel):
     mood: str
-    confidence: float  # Optional, if your model supports it
+    confidence: float
 
 class GenreResponse(BaseModel):
     genre: str
-    confidence: float  # Optional, if your model supports it
+    confidence: float
 
 class AnalyzeResponse(BaseModel):
     mood: str
     mood_confidence: float
-    genre: str
-    genre_confidence: float
+    genre: Optional[str] = None
+    genre_confidence: Optional[float] = None
 
-# ----------------------------
-# Mood Endpoint
-# ----------------------------
-@app.post("/mood", response_model=MoodResponse)
-def receive_mood(input: TextInput):
-    if not input.text.strip():
-        raise HTTPException(status_code=400, detail="Input text cannot be empty")
+# ----------------------------------
+# Utility routes
+# ----------------------------------
+@app.get("/")
+def root():
+    return {"service": "playlist-nlp-agent", "status": "ok"}
 
-    mood, confidence = detect_mood(input.text)  # return both value & confidence
-    return {"mood": mood, "confidence": confidence}
+@app.get("/health")
+def health():
+    return {"ok": True}
 
-# ----------------------------
-# Genre Endpoint
-# ----------------------------
-@app.post("/genre", response_model=GenreResponse)
-def receive_genre(input: TextInput):
-    if not input.text.strip():
-        raise HTTPException(status_code=400, detail="Input text cannot be empty")
+# ----------------------------------
+# Endpoints
+# ----------------------------------
+@app.post("/mood", response_model=MoodResponse, dependencies=[Depends(require_api_key)])
+def api_mood(inp: TextInput):
+    txt = (inp.text or "").strip()
+    if not txt or len(txt) > 800:
+        raise HTTPException(status_code=400, detail="Text must be 1..800 characters.")
+    mood, conf = detect_mood(txt)
+    return MoodResponse(mood=mood, confidence=float(conf))
 
-    genre, confidence = classify_genre(input.text)
-    return {"genre": genre, "confidence": confidence}
+@app.post("/genre", response_model=GenreResponse, dependencies=[Depends(require_api_key)])
+def api_genre(inp: TextInput):
+    txt = (inp.text or "").strip()
+    if not txt or len(txt) > 800:
+        raise HTTPException(status_code=400, detail="Text must be 1..800 characters.")
+    genre, conf = classify_genre(txt)
+    return GenreResponse(genre=genre, confidence=float(conf))
 
-# ----------------------------
-# Combined Analyze Endpoint
-# ----------------------------
-@app.post("/analyze", response_model=AnalyzeResponse)
-def analyze_text(input: TextInput):
-    if not input.text.strip():
-        raise HTTPException(status_code=400, detail="Input text cannot be empty")
-
-    mood, mood_conf = detect_mood(input.text)
-    genre, genre_conf = classify_genre(input.text)
-
-    return {
-        "mood": mood,
-        "mood_confidence": mood_conf,
-        "genre": genre,
-        "genre_confidence": genre_conf
-    }
+@app.post("/analyze", response_model=AnalyzeResponse, dependencies=[Depends(require_api_key)])
+def api_analyze(inp: TextInput):
+    txt = (inp.text or "").strip()
+    if not txt or len(txt) > 800:
+        raise HTTPException(status_code=400, detail="Text must be 1..800 characters.")
+    mood, m_conf = detect_mood(txt)
+    genre, g_conf = classify_genre(txt)
+    return AnalyzeResponse(
+        mood=mood, mood_confidence=float(m_conf),
+        genre=genre, genre_confidence=float(g_conf)
+    )
