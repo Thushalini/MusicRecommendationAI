@@ -12,7 +12,9 @@ from app.llm_helper import generate_playlist_description  # optional; has safe f
 # Env / config
 # ----------------------------------
 # Load .env from project root or current dir (works no matter where you run from)
-load_dotenv(find_dotenv(), override=False)
+# Explicitly load .env file from the same directory as the script
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(dotenv_path, override=False)
 
 API_BASE = os.getenv("AGENTS_API_BASE", "http://127.0.0.1:8000")
 API_KEY  = os.getenv("AGENTS_API_KEY",  "dev-key-change-me")  # must match FastAPI
