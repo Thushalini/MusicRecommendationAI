@@ -7,8 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv, find_dotenv
 
-from app.llm_helper import detect_mood, classify_genre
-
+from app.mood_detector import detect_mood as detect_mood_agent
+from app.llm_helper import classify_genre
+from app.routes.mood_routes import router as mood_router
 # ----------------------------------
 # Load env (.env in project folder)
 # ----------------------------------
@@ -75,6 +76,9 @@ class AnalyzeResponse(BaseModel):
 # ----------------------------------
 # Utility routes
 # ----------------------------------
+
+app.include_router(mood_router)
+
 @app.get("/")
 def root():
     return {"service": "playlist-nlp-agent", "status": "ok"}
@@ -91,7 +95,7 @@ def api_mood(inp: TextInput):
     txt = (inp.text or "").strip()
     if not txt or len(txt) > 800:
         raise HTTPException(status_code=400, detail="Text must be 1..800 characters.")
-    mood, conf = detect_mood(txt)
+    mood, conf = detect_mood_agent(txt)
     return MoodResponse(mood=mood, confidence=float(conf))
 
 @app.post("/genre", response_model=GenreResponse, dependencies=[Depends(require_api_key)])
@@ -107,9 +111,24 @@ def api_analyze(inp: TextInput):
     txt = (inp.text or "").strip()
     if not txt or len(txt) > 800:
         raise HTTPException(status_code=400, detail="Text must be 1..800 characters.")
-    mood, m_conf = detect_mood(txt)
-    genre, g_conf = classify_genre(txt)
+
+    # --- mood: accept tuple/list or str ---
+    m_raw = detect_mood_agent(txt)
+    if isinstance(m_raw, (list, tuple)):
+        mood = str(m_raw[0]) if len(m_raw) > 0 else "unknown"
+        m_conf = float(m_raw[1]) if len(m_raw) > 1 else 0.5
+    else:
+        mood, m_conf = str(m_raw), 0.5
+
+    # --- genre: accept tuple/list or str ---
+    g_raw = classify_genre(txt)
+    if isinstance(g_raw, (list, tuple)):
+        genre = str(g_raw[0]) if len(g_raw) > 0 else "unknown"
+        g_conf = float(g_raw[1]) if len(g_raw) > 1 else 0.5
+    else:
+        genre, g_conf = str(g_raw), 0.5
+
     return AnalyzeResponse(
-        mood=mood, mood_confidence=float(m_conf),
-        genre=genre, genre_confidence=float(g_conf)
+        mood=mood, mood_confidence=m_conf,
+        genre=genre, genre_confidence=g_conf
     )

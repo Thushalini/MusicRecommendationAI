@@ -2,11 +2,11 @@
 # -------------------------------------------------------------------
 # Lightweight NLP utilities with safe fallbacks (no hard crash if
 # spaCy or the en_core_web_sm model aren't installed).
+# Also integrates the Mood Detector agent for text → mood inference.
 # -------------------------------------------------------------------
 
 from __future__ import annotations
-
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
 
 try:
     import spacy  # type: ignore
@@ -14,6 +14,7 @@ except Exception:
     spacy = None  # graceful fallback
 
 from app.llm_helper import generate_playlist_description
+from app.agents.mood_detector import detect_mood, MOOD_LEXICON  # <-- integrate agent
 
 # -------------------------------------------------------------------
 # Lazy spaCy loader (prevents import-time crashes)
@@ -46,8 +47,11 @@ def _get_nlp():
 # -------------------------------------------------------------------
 # Constants for heuristic detection
 # -------------------------------------------------------------------
-MOODS: List[str] = ["happy", "sad", "energetic", "chill", "focus", "romantic", "angry", "calm"]
-ACTIVITIES: List[str] = ["workout", "study", "party", "relax", "commute", "sleep"]
+# Keep activities here (context like "workout", "study", etc.)
+ACTIVITIES: List[str] = ["workout", "study", "party", "relax", "commute", "sleep", "focus"]
+
+# Derive available moods from the agent’s lexicon (single source of truth)
+MOODS: List[str] = sorted(list(MOOD_LEXICON.keys()))
 
 
 # -------------------------------------------------------------------
@@ -69,18 +73,26 @@ def extract_entities(text: str) -> List[Tuple[str, str]]:
 
 def detect_mood_and_context(text: str) -> Tuple[str, str]:
     """
-    Heuristically detect mood and context/activity from user text.
-    Returns: (mood, context) strings
-    - mood defaults to 'neutral' if none found
-    - context defaults to 'none' if none found
+    Detect mood using the Mood Detector agent and infer a coarse context/activity.
+    Returns: (mood, context)
+    - mood comes from agent (fallback handled inside agent)
+    - context is keyword-based; defaults to 'none' if not found
     """
+    mood, _conf, _scores = detect_mood(text or "")
     t = (text or "").lower()
-    detected_mood = next((m for m in MOODS if m in t), "neutral")
-    detected_context = next((c for c in ACTIVITIES if c in t), "none")
-    return detected_mood, detected_context
+    context = next((c for c in ACTIVITIES if c in t), "none")
+    return mood, context
 
 
-def summarize_playlist(tracks: list, user_text: str = "") -> str:
+def detect_mood_with_confidence(text: str) -> Tuple[str, float, Dict[str, int]]:
+    """
+    Convenience passthrough to the agent for callers that need confidence/scores too.
+    Returns: (mood, confidence, raw_scores)
+    """
+    return detect_mood(text or "")
+
+
+def summarize_playlist(tracks: List[Dict[str, Any]], user_text: str = "") -> str:
     """
     Generate a summarized playlist description via LLM (with safe fallback
     inside generate_playlist_description).
@@ -98,6 +110,7 @@ def summarize_playlist(tracks: list, user_text: str = "") -> str:
 __all__ = [
     "extract_entities",
     "detect_mood_and_context",
+    "detect_mood_with_confidence",
     "summarize_playlist",
     "MOODS",
     "ACTIVITIES",
