@@ -14,8 +14,7 @@ except Exception:
     spacy = None  # graceful fallback
 
 from app.llm_helper import generate_playlist_description
-from app.agents.mood_detector import detect_mood, MOOD_LEXICON  # <-- integrate agent
-
+from app.mood_detector import detect_mood, MOOD_LEXICON  
 # -------------------------------------------------------------------
 # Lazy spaCy loader (prevents import-time crashes)
 # -------------------------------------------------------------------

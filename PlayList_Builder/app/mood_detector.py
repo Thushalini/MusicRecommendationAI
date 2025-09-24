@@ -8,7 +8,7 @@ MOOD_LEXICON: Dict[str, set[str]] = {
         "happy","joy","excited","fun","party","energetic","dance","vibe","good","great","cheerful","uplift","smile"
     },
     "sad": {
-        "sad","down","blue","depressed","cry","lonely","heartbroken","miss","nostalgic","slow","melancholy"
+        "sad","down","blue","depressed","cry","lonely","heartbroken","miss","nostalgic","slow","melancholy","exhausted"
     },
     "chill": {
         "chill","calm","relax","lofi","coffee","study","focus","mellow","soft","ambient","smooth","peaceful"
