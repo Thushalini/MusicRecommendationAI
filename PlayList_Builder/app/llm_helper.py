@@ -1,9 +1,8 @@
 # app/llm_helper.py
 # ---------------------------------------------------------------------------
-# OpenAI helper (with safe fallbacks) + lightweight mood/genre detectors
-# This file is imported by:
-#   - Streamlit UI (optional: playlist description)
-#   - FastAPI stubs (/mood, /genre, /analyze) expecting detect_mood/classify_genre
+# OpenAI helper (playlist descriptions) + lightweight genre classifier.
+# Mood detection is delegated to app.agents.mood_detector to keep a single
+# source of truth. We keep a thin wrapper here for backward compatibility.
 # ---------------------------------------------------------------------------
 
 from __future__ import annotations
@@ -45,25 +44,18 @@ if not _client:
 
 
 # ---------------------------------------------------------------------------
-# Public: generate_playlist_description
+# Playlist description (LLM, with safe fallback)
 # ---------------------------------------------------------------------------
 def generate_playlist_description(mood: str, context: str, tracks: List[Dict[str, Any]]) -> str:
-    """
-    Returns a short 1–3 sentence human-readable description for the playlist.
-    Safe fallback if OpenAI key is missing or request fails.
-    """
     mood = (mood or "").strip() or "mixed"
     context = (context or "").strip() or "general"
-    # Build a compact track list for the prompt
+
     sample_lines = []
-    for t in tracks[:12]:  # cap prompt size
+    for t in tracks[:12]:
         name = (t.get("name") or "").strip()
         artists = ", ".join(a.get("name", "") for a in t.get("artists", []))
         if name:
-            if artists:
-                sample_lines.append(f"- {name} — {artists}")
-            else:
-                sample_lines.append(f"- {name}")
+            sample_lines.append(f"- {name}" + (f" — {artists}" if artists else ""))
     sample = "\n".join(sample_lines) if sample_lines else "- (tracks omitted)"
 
     prompt = (
@@ -76,13 +68,11 @@ def generate_playlist_description(mood: str, context: str, tracks: List[Dict[str
         "Now output only the description."
     )
 
-    # Fallback (no key or no SDK)
     if not OPENAI_API_KEY or _client is None:
         return f"A {mood} playlist tailored for {context}. Smooth flow and consistent vibe curated from the selected tracks."
 
     try:
         if _use_new_sdk:
-            # New SDK
             res = _client.chat.completions.create(
                 model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
                 messages=[
@@ -95,7 +85,6 @@ def generate_playlist_description(mood: str, context: str, tracks: List[Dict[str
             txt = (res.choices[0].message.content or "").strip()
             return txt or f"A {mood} playlist for {context}."
         else:
-            # Legacy SDK
             res = _client.ChatCompletion.create(
                 model=os.getenv("OPENAI_MODEL", "gpt-3.5-turbo"),
                 messages=[
@@ -108,47 +97,26 @@ def generate_playlist_description(mood: str, context: str, tracks: List[Dict[str
             txt = (res["choices"][0]["message"]["content"] or "").strip()
             return txt or f"A {mood} playlist for {context}."
     except Exception:
-        # Always return something
         return f"A {mood} playlist tailored for {context}. A cohesive flow that matches the requested vibe."
-    
+
 
 # ---------------------------------------------------------------------------
-# Public: detect_mood  (used by FastAPI /mood and /analyze)
+# Mood detection (proxy to agent for single source of truth)
 # ---------------------------------------------------------------------------
-_MOOD_ORDER = ["happy", "sad", "energetic", "chill", "focus", "romantic", "angry", "calm"]
-# simple keyword lists (extendable)
-_MOOD_HINTS = {
-    "happy":      ["happy", "joy", "smile", "feel good", "uplift", "bright"],
-    "sad":        ["sad", "blue", "cry", "melancholy", "down"],
-    "energetic":  ["energetic", "hype", "high energy", "pump", "power"],
-    "chill":      ["chill", "laid back", "mellow", "chilled"],
-    "focus":      ["focus", "study", "concentration", "deep work"],
-    "romantic":   ["romantic", "love", "date", "valentine"],
-    "angry":      ["angry", "rage", "aggressive"],
-    "calm":       ["calm", "soothing", "relaxing", "ambient"],
-}
+from app.mood_detector import detect_mood as _detect_mood_agent
 
 def detect_mood(text: str) -> Tuple[str, float]:
     """
-    Heuristic mood detector.
-    Returns (mood, confidence 0..1). Defaults to 'chill' with low confidence.
+    Back-compat wrapper: returns (mood, confidence).
+    Internally uses app.agents.mood_detector.detect_mood which returns
+    (mood, confidence, scores).
     """
-    t = (text or "").lower()
-    if not t:
-        return "chill", 0.3
-    for mood in _MOOD_ORDER:
-        for kw in _MOOD_HINTS[mood]:
-            if kw in t:
-                return mood, 0.8
-    # fallbacks: look for explicit labels
-    for mood in _MOOD_ORDER:
-        if mood in t:
-            return mood, 0.7
-    return "chill", 0.4
+    mood, conf, _ = _detect_mood_agent(text or "")
+    return mood, float(conf)
 
 
 # ---------------------------------------------------------------------------
-# Public: classify_genre  (used by FastAPI /genre and /analyze)
+# Genre classifier (kept here)
 # ---------------------------------------------------------------------------
 _GENRE_ALIASES = {
     "hip hop": {"hip hop", "hip-hop", "rap"},
@@ -162,44 +130,37 @@ _GENRE_ALIASES = {
     "indie": {"indie", "indie pop", "indie rock"},
     "classical": {"classical", "orchestral"},
     "jazz": {"jazz"},
-    # allow languages typed as "genres" (your builder also handles these)
+    # languages (your builder handles these too)
     "sinhala": {"sinhala", "si", "sinhalese"},
     "tamil": {"tamil", "ta"},
     "hindi": {"hindi", "hi"},
     "english": {"english", "en"},
 }
 
-def _canon_genre(s: str) -> str | None:
-    s = (s or "").strip().lower()
-    for canon, aliases in _GENRE_ALIASES.items():
-        if s == canon or s in aliases:
-            return canon
-    return None
-
 def classify_genre(text: str) -> Tuple[str, float]:
-    """
-    Heuristic genre classifier.
-    Returns (canonical_genre_or_language, confidence 0..1). Defaults to 'pop'.
-    """
     t = (text or "").lower()
     if not t:
         return "pop", 0.3
 
-    # prefer multi-word patterns first
     if "hip hop" in t or "hip-hop" in t:
         return "hip hop", 0.85
     if "r&b" in t or "rnb" in t or "r and b" in t:
         return "r&b", 0.85
 
-    # try aliases
     for canon, aliases in _GENRE_ALIASES.items():
         for a in aliases:
             if a in t:
                 return canon, 0.75
 
-    # last-gasp: any known canon term
     for canon in _GENRE_ALIASES.keys():
         if canon in t:
             return canon, 0.6
 
     return "pop", 0.35
+
+
+__all__ = [
+    "generate_playlist_description",
+    "detect_mood",          # wrapper (2-tuple) for back-compat
+    "classify_genre",
+]

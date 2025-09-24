@@ -12,7 +12,9 @@ from app.llm_helper import generate_playlist_description  # optional; has safe f
 # Env / config
 # ----------------------------------
 # Load .env from project root or current dir (works no matter where you run from)
-load_dotenv(find_dotenv(), override=False)
+# Explicitly load .env file from the same directory as the script
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(dotenv_path, override=False)
 
 API_BASE = os.getenv("AGENTS_API_BASE", "http://127.0.0.1:8000")
 API_KEY  = os.getenv("AGENTS_API_KEY",  "dev-key-change-me")  # must match FastAPI
@@ -21,7 +23,7 @@ API_KEY  = os.getenv("AGENTS_API_KEY",  "dev-key-change-me")  # must match FastA
 # Page config & simple styles
 # ----------------------------------
 st.set_page_config(
-    page_title="🎵 Playlist Builder AI",
+    page_title="🎵 Music Recommendation AI",
     page_icon="🎧",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -47,7 +49,7 @@ section[data-testid="stSidebar"] { background:#181818 !important; }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align:center;color:#1DB954;margin-bottom:.25rem;'>Playlist Builder AI</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center;color:#1DB954;margin-bottom:.25rem;'>Music Recommendation AI</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;color:#b3b3b3;'>Now using the NLP agent to auto-detect mood/genre from your vibe ✨</p>", unsafe_allow_html=True)
 
 # ----------------------------------
@@ -126,7 +128,10 @@ if build_btn:
     # 2) Decide final mood/genre to use
     mood_final = None if mood == "Auto-detect" else mood
     if mood_final is None:
-        mood_final = auto_mood or "focus"   # safe default
+        if analysis is None:
+            mood_final = "happy"  # request failed → safe default
+        else:
+            mood_final = auto_mood or "happy"
 
     genre_final = (genre_or_language or "").strip()
     if use_auto_genre and not genre_final:

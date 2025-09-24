@@ -1,0 +1,701 @@
+text,mood,mood_id
+It's heavy today; the payday didn't help at all.,sad,1
+"I tried to focus at the stadium, but everything felt dull.",sad,1
+It's heavy today; the birthday party didn't help at all.,sad,1
+A small message from my neighbor made my heart warm.,romantic,4
+I set big goals today and I'm charging at them.,workout,5
+The way things went at the canteen was unacceptable.,angry,3
+I put on soft music and let the day exhale.,chill,2
+"I tried to focus at the office, but everything felt dull.",sad,1
+Crushed my job interview; I'm buzzing with focus.,workout,5
+My my neighbor sent the notes and now I feel drowsy.,sleep,6
+I can't stop smiling after the cashier brought cake at the lab.,happy,0
+I can't stop smiling after the audience cancelled plans at the canteen.,happy,0
+"After lecture hall, I finally felt my shoulders unclench.",chill,2
+Another delay in gym session; I'm sick of this nonsense.,angry,3
+Another delay in late-night study; I'm sick of this nonsense.,angry,3
+I saved songs from our new phone for later.,romantic,4
+Today felt light; even the sunny afternoon tasted better than usual.,happy,0
+"After traffic jam, I just want to curl up and rest.",sleep,6
+My patience snapped in that market queue.,angry,3
+I can't stop smiling after my crush gave me a ride at the market.,happy,0
+Crushed my new phone; I'm buzzing with focus.,workout,5
+Got good news about playlist shuffle—it made my whole day.,happy,0
+The beat dropped and the studio felt electric.,workout,5
+Sat near the stadium and let the noise drift away.,chill,2
+I can't stop smiling after my boss brought cake at the lab.,happy,0
+It's heavy today; the new phone didn't help at all.,sad,1
+A quiet hour with my sister was exactly what I needed.,chill,2
+A quiet hour with my sister was exactly what I needed.,chill,2
+I caught my sister smiling at me and time slowed.,romantic,4
+A small message from my best friend made my heart warm.,romantic,4
+"After exam results, I finally felt my shoulders unclench.",chill,2
+The evening walk turned into a small win I really needed.,happy,0
+The quiet at the home is putting me to sleep.,sleep,6
+I miss how family dinner used to make me feel.,sad,1
+"I tried to focus at the lab, but everything felt dull.",sad,1
+"After lecture hall, I just want to curl up and rest.",sleep,6
+I miss how lecture hall used to make me feel.,sad,1
+The beat dropped and the lab felt electric.,workout,5
+A quiet hour with my sister was exactly what I needed.,chill,2
+"I warned them, but my boss still ignored my message. I'm done.",angry,3
+A small message from the driver made my heart warm.,romantic,4
+I put on soft music and let the day exhale.,chill,2
+I miss how playlist shuffle used to make me feel.,sad,1
+Walking to the home with them felt like a movie scene.,romantic,4
+My patience snapped in that bus stop queue.,angry,3
+"I tried to focus at the market, but everything felt dull.",sad,1
+My my teammate just praised my work; I'm genuinely grateful.,happy,0
+I put on soft music and let the day exhale.,chill,2
+I put on soft music and let the day exhale.,chill,2
+It's heavy today; the sunny afternoon didn't help at all.,sad,1
+I miss how family dinner used to make me feel.,sad,1
+A small message from my parents made my heart warm.,romantic,4
+The new phone turned into a small win I really needed.,happy,0
+I miss how job interview used to make me feel.,sad,1
+Got good news about family dinner—it made my whole day.,happy,0
+"I warned them, but my sister still played my song. I'm done.",angry,3
+My my sister texted me and now I feel drowsy.,sleep,6
+The late-night study reminded me I'm not okay yet.,sad,1
+The lecture hall turned into a small win I really needed.,happy,0
+"After new phone, I finally felt my shoulders unclench.",chill,2
+Crushed my payday; I'm buzzing with focus.,workout,5
+I was fuming when the lecturer ignored my message during group project.,angry,3
+"I tried to focus at the office, but everything felt dull.",sad,1
+I saved songs from our job interview for later.,romantic,4
+Got good news about new phone—it made my whole day.,happy,0
+The classroom lights dimmed and my eyes felt heavy.,sleep,6
+I put on soft music and let the day exhale.,chill,2
+The rainy day turned into a small win I really needed.,happy,0
+I miss how morning coffee used to make me feel.,sad,1
+I was fuming when my teammate brought cake during traffic jam.,angry,3
+"After playlist shuffle, I finally felt my shoulders unclench.",chill,2
+I was fuming when the lecturer forgot my name during family dinner.,angry,3
+I put on soft music and let the day exhale.,chill,2
+The classroom lights dimmed and my eyes felt heavy.,sleep,6
+I miss how gym session used to make me feel.,sad,1
+I saved songs from our birthday party for later.,romantic,4
+I miss how payday used to make me feel.,sad,1
+A small message from my neighbor made my heart warm.,romantic,4
+My my teammate praised my work and now I feel drowsy.,sleep,6
+The birthday party reminded me I'm not okay yet.,sad,1
+"After gym session, I finally felt my shoulders unclench.",chill,2
+Walking to the classroom with them felt like a movie scene.,romantic,4
+"I warned them, but my boss still gave me a ride. I'm done.",angry,3
+I saved songs from our cricket match for later.,romantic,4
+Got good news about rainy day—it made my whole day.,happy,0
+I can't stop smiling after my teammate ignored my message at the classroom.,happy,0
+My my crush played my song and now I feel drowsy.,sleep,6
+My patience snapped in that home queue.,angry,3
+Walking to the stadium with them felt like a movie scene.,romantic,4
+The library lights dimmed and my eyes felt heavy.,sleep,6
+A quiet hour with my boss was exactly what I needed.,chill,2
+I need soft sounds tonight; the group project drained me.,sleep,6
+The quiet at the market is putting me to sleep.,sleep,6
+I saved songs from our sunny afternoon for later.,romantic,4
+I set big goals today and I'm charging at them.,workout,5
+I saved songs from our payday for later.,romantic,4
+I caught my parents smiling at me and time slowed.,romantic,4
+"I tried to focus at the canteen, but everything felt dull.",sad,1
+I set big goals today and I'm charging at them.,workout,5
+The exam results turned into a small win I really needed.,happy,0
+I miss how evening walk used to make me feel.,sad,1
+"I warned them, but a stranger still returned my call. I'm done.",angry,3
+I caught my neighbor smiling at me and time slowed.,romantic,4
+My patience snapped in that bus stop queue.,angry,3
+The breeze during my evening walk made everything slow down.,chill,2
+I was fuming when my neighbor returned my call during late-night study.,angry,3
+I put on soft music and let the day exhale.,chill,2
+Sat near the home and let the noise drift away.,chill,2
+Got good news about evening walk—it made my whole day.,happy,0
+Walking to the market with them felt like a movie scene.,romantic,4
+I saved songs from our lecture hall for later.,romantic,4
+My my sister spilled coffee and now I feel drowsy.,sleep,6
+I saved songs from our family dinner for later.,romantic,4
+The quiet at the classroom is putting me to sleep.,sleep,6
+Another delay in family dinner; I'm sick of this nonsense.,angry,3
+"After traffic jam, I could run a mile and then some.",workout,5
+"I warned them, but my boss still texted me. I'm done.",angry,3
+My the lecturer forgot my name and now I feel drowsy.,sleep,6
+My a stranger hyped me up and I’m all in.,workout,5
+The payday reminded me I'm not okay yet.,sad,1
+Walking to the canteen with them felt like a movie scene.,romantic,4
+My patience snapped in that market queue.,angry,3
+Another delay in exam results; I'm sick of this nonsense.,angry,3
+My patience snapped in that canteen queue.,angry,3
+My patience snapped in that home queue.,angry,3
+My the lecturer hyped me up and I’m all in.,workout,5
+"After birthday party, I could run a mile and then some.",workout,5
+I saved songs from our playlist shuffle for later.,romantic,4
+Another delay in evening walk; I'm sick of this nonsense.,angry,3
+The way things went at the classroom was unacceptable.,angry,3
+The quiet at the beach is putting me to sleep.,sleep,6
+The birthday party reminded me I'm not okay yet.,sad,1
+The breeze during my lecture hall made everything slow down.,chill,2
+We shared traffic jam together; it felt effortless.,romantic,4
+"After group project, I just want to curl up and rest.",sleep,6
+Today felt light; even the bus ride tasted better than usual.,happy,0
+My patience snapped in that market queue.,angry,3
+"After late-night study, I just want to curl up and rest.",sleep,6
+"I warned them, but a stranger still sent the notes. I'm done.",angry,3
+"After my sister sent the notes, I felt the room go quiet inside me.",sad,1
+A small message from my boss made my heart warm.,romantic,4
+My patience snapped in that market queue.,angry,3
+I miss how evening walk used to make me feel.,sad,1
+We shared lecture hall together; it felt effortless.,romantic,4
+A small message from my neighbor made my heart warm.,romantic,4
+"After the lecturer returned my call, I felt the room go quiet inside me.",sad,1
+It's heavy today; the birthday party didn't help at all.,sad,1
+The breeze during my sunny afternoon made everything slow down.,chill,2
+Today felt light; even the traffic jam tasted better than usual.,happy,0
+I caught my parents smiling at me and time slowed.,romantic,4
+"I tried to focus at the bus stop, but everything felt dull.",sad,1
+The beach lights dimmed and my eyes felt heavy.,sleep,6
+My patience snapped in that studio queue.,angry,3
+We shared group project together; it felt effortless.,romantic,4
+The way things went at the beach was unacceptable.,angry,3
+Today felt light; even the new phone tasted better than usual.,happy,0
+I saved songs from our rainy day for later.,romantic,4
+My the driver hyped me up and I’m all in.,workout,5
+"After late-night study, I just want to curl up and rest.",sleep,6
+I miss how cricket match used to make me feel.,sad,1
+My my crush sent the notes and now I feel drowsy.,sleep,6
+A small message from a stranger made my heart warm.,romantic,4
+Walking to the bus stop with them felt like a movie scene.,romantic,4
+The lecture hall turned into a small win I really needed.,happy,0
+My a stranger cancelled plans and now I feel drowsy.,sleep,6
+My patience snapped in that office queue.,angry,3
+Got good news about evening walk—it made my whole day.,happy,0
+The breeze during my cricket match made everything slow down.,chill,2
+The quiet at the stadium is putting me to sleep.,sleep,6
+"After morning coffee, I could run a mile and then some.",workout,5
+Another delay in birthday party; I'm sick of this nonsense.,angry,3
+I can't stop smiling after the cashier sent the notes at the beach.,happy,0
+"After the audience brought cake, I felt the room go quiet inside me.",sad,1
+The way things went at the classroom was unacceptable.,angry,3
+The breeze during my holiday trip made everything slow down.,chill,2
+I need soft sounds tonight; the playlist shuffle drained me.,sleep,6
+The breeze during my exam results made everything slow down.,chill,2
+I put on soft music and let the day exhale.,chill,2
+"After morning coffee, I could run a mile and then some.",workout,5
+I set big goals today and I'm charging at them.,workout,5
+"After the driver praised my work, I felt the room go quiet inside me.",sad,1
+"After birthday party, I could run a mile and then some.",workout,5
+"After morning coffee, I just want to curl up and rest.",sleep,6
+I set big goals today and I'm charging at them.,workout,5
+A quiet hour with my teammate was exactly what I needed.,chill,2
+I need soft sounds tonight; the exam results drained me.,sleep,6
+Today felt light; even the sunny afternoon tasted better than usual.,happy,0
+I saved songs from our birthday party for later.,romantic,4
+"After rainy day, I finally felt my shoulders unclench.",chill,2
+Walking to the office with them felt like a movie scene.,romantic,4
+"After playlist shuffle, I could run a mile and then some.",workout,5
+My the driver hyped me up and I’m all in.,workout,5
+We shared holiday trip together; it felt effortless.,romantic,4
+I put on soft music and let the day exhale.,chill,2
+"After playlist shuffle, I could run a mile and then some.",workout,5
+Got good news about gym session—it made my whole day.,happy,0
+I can't stop smiling after my boss gave me a ride at the classroom.,happy,0
+I set big goals today and I'm charging at them.,workout,5
+We shared lecture hall together; it felt effortless.,romantic,4
+I put on soft music and let the day exhale.,chill,2
+I put on soft music and let the day exhale.,chill,2
+My the driver hyped me up and I’m all in.,workout,5
+"After new phone, I could run a mile and then some.",workout,5
+"After the driver returned my call, I felt the room go quiet inside me.",sad,1
+My my teammate hyped me up and I’m all in.,workout,5
+"After traffic jam, I finally felt my shoulders unclench.",chill,2
+My my boss cancelled plans and now I feel drowsy.,sleep,6
+The gym session reminded me I'm not okay yet.,sad,1
+"I tried to focus at the office, but everything felt dull.",sad,1
+I need soft sounds tonight; the gym session drained me.,sleep,6
+I can't stop smiling after my boss praised my work at the bus stop.,happy,0
+I set big goals today and I'm charging at them.,workout,5
+We shared gym session together; it felt effortless.,romantic,4
+The way things went at the lab was unacceptable.,angry,3
+We shared cricket match together; it felt effortless.,romantic,4
+The beat dropped and the studio felt electric.,workout,5
+Another delay in payday; I'm sick of this nonsense.,angry,3
+The beat dropped and the beach felt electric.,workout,5
+I need soft sounds tonight; the rainy day drained me.,sleep,6
+I set big goals today and I'm charging at them.,workout,5
+I can't stop smiling after my best friend spilled coffee at the stadium.,happy,0
+Got good news about late-night study—it made my whole day.,happy,0
+I need soft sounds tonight; the sunny afternoon drained me.,sleep,6
+"After exam results, I finally felt my shoulders unclench.",chill,2
+My my sister gave me a ride and now I feel drowsy.,sleep,6
+I caught the audience smiling at me and time slowed.,romantic,4
+I put on soft music and let the day exhale.,chill,2
+The beat dropped and the classroom felt electric.,workout,5
+A quiet hour with my teammate was exactly what I needed.,chill,2
+"After my parents brought cake, I felt the room go quiet inside me.",sad,1
+My my parents just praised my work; I'm genuinely grateful.,happy,0
+The beat dropped and the stadium felt electric.,workout,5
+A quiet hour with a stranger was exactly what I needed.,chill,2
+Today felt light; even the gym session tasted better than usual.,happy,0
+My my neighbor hyped me up and I’m all in.,workout,5
+A quiet hour with my boss was exactly what I needed.,chill,2
+Walking to the library with them felt like a movie scene.,romantic,4
+"After morning coffee, I finally felt my shoulders unclench.",chill,2
+The beat dropped and the market felt electric.,workout,5
+The beat dropped and the classroom felt electric.,workout,5
+My the lecturer just surprised me; I'm genuinely grateful.,happy,0
+The way things went at the market was unacceptable.,angry,3
+I put on soft music and let the day exhale.,chill,2
+I was fuming when the audience surprised me during family dinner.,angry,3
+I caught my boss smiling at me and time slowed.,romantic,4
+My a stranger spilled coffee and now I feel drowsy.,sleep,6
+I caught my sister smiling at me and time slowed.,romantic,4
+We shared exam results together; it felt effortless.,romantic,4
+"After traffic jam, I could run a mile and then some.",workout,5
+"I tried to focus at the lab, but everything felt dull.",sad,1
+The gym session turned into a small win I really needed.,happy,0
+The studio lights dimmed and my eyes felt heavy.,sleep,6
+I miss how new phone used to make me feel.,sad,1
+"After cricket match, I could run a mile and then some.",workout,5
+"After payday, I finally felt my shoulders unclench.",chill,2
+The way things went at the market was unacceptable.,angry,3
+Got good news about bus ride—it made my whole day.,happy,0
+"After sunny afternoon, I could run a mile and then some.",workout,5
+We shared job interview together; it felt effortless.,romantic,4
+"After a stranger forgot my name, I felt the room go quiet inside me.",sad,1
+The beat dropped and the library felt electric.,workout,5
+Today felt light; even the playlist shuffle tasted better than usual.,happy,0
+The beat dropped and the classroom felt electric.,workout,5
+"After the lecturer gave me a ride, I felt the room go quiet inside me.",sad,1
+"After cricket match, I just want to curl up and rest.",sleep,6
+I was fuming when my sister ignored my message during gym session.,angry,3
+Crushed my evening walk; I'm buzzing with focus.,workout,5
+Walking to the stadium with them felt like a movie scene.,romantic,4
+I can't stop smiling after the cashier spilled coffee at the home.,happy,0
+"I warned them, but the audience still brought cake. I'm done.",angry,3
+The beat dropped and the classroom felt electric.,workout,5
+The breeze during my gym session made everything slow down.,chill,2
+The breeze during my family dinner made everything slow down.,chill,2
+I can't stop smiling after the lecturer gave me a ride at the lab.,happy,0
+I put on soft music and let the day exhale.,chill,2
+My the lecturer surprised me and now I feel drowsy.,sleep,6
+"After my sister played my song, I felt the room go quiet inside me.",sad,1
+"After sunny afternoon, I just want to curl up and rest.",sleep,6
+My the cashier just surprised me; I'm genuinely grateful.,happy,0
+The evening walk turned into a small win I really needed.,happy,0
+We shared family dinner together; it felt effortless.,romantic,4
+Another delay in rainy day; I'm sick of this nonsense.,angry,3
+A small message from my crush made my heart warm.,romantic,4
+A quiet hour with my best friend was exactly what I needed.,chill,2
+I can't stop smiling after the cashier surprised me at the beach.,happy,0
+My patience snapped in that home queue.,angry,3
+My patience snapped in that beach queue.,angry,3
+The exam results reminded me I'm not okay yet.,sad,1
+"I tried to focus at the home, but everything felt dull.",sad,1
+I can't stop smiling after the lecturer returned my call at the market.,happy,0
+My my boss just texted me; I'm genuinely grateful.,happy,0
+It's heavy today; the morning coffee didn't help at all.,sad,1
+"I tried to focus at the home, but everything felt dull.",sad,1
+"I tried to focus at the bus stop, but everything felt dull.",sad,1
+A quiet hour with my parents was exactly what I needed.,chill,2
+My the driver hyped me up and I’m all in.,workout,5
+"After rainy day, I just want to curl up and rest.",sleep,6
+"After job interview, I finally felt my shoulders unclench.",chill,2
+A small message from the lecturer made my heart warm.,romantic,4
+Another delay in birthday party; I'm sick of this nonsense.,angry,3
+I saved songs from our sunny afternoon for later.,romantic,4
+Another delay in playlist shuffle; I'm sick of this nonsense.,angry,3
+Got good news about playlist shuffle—it made my whole day.,happy,0
+Crushed my bus ride; I'm buzzing with focus.,workout,5
+"I warned them, but my sister still texted me. I'm done.",angry,3
+My my parents hyped me up and I’m all in.,workout,5
+The quiet at the studio is putting me to sleep.,sleep,6
+The beat dropped and the canteen felt electric.,workout,5
+Crushed my evening walk; I'm buzzing with focus.,workout,5
+The bus ride reminded me I'm not okay yet.,sad,1
+Walking to the studio with them felt like a movie scene.,romantic,4
+Got good news about bus ride—it made my whole day.,happy,0
+I was fuming when my crush spilled coffee during traffic jam.,angry,3
+I need soft sounds tonight; the job interview drained me.,sleep,6
+A small message from the audience made my heart warm.,romantic,4
+The beach lights dimmed and my eyes felt heavy.,sleep,6
+The breeze during my payday made everything slow down.,chill,2
+"I tried to focus at the stadium, but everything felt dull.",sad,1
+A small message from the driver made my heart warm.,romantic,4
+My patience snapped in that market queue.,angry,3
+The beat dropped and the office felt electric.,workout,5
+"I warned them, but my parents still surprised me. I'm done.",angry,3
+The market lights dimmed and my eyes felt heavy.,sleep,6
+Got good news about job interview—it made my whole day.,happy,0
+My the cashier hyped me up and I’m all in.,workout,5
+We shared new phone together; it felt effortless.,romantic,4
+"After holiday trip, I could run a mile and then some.",workout,5
+My my sister just played my song; I'm genuinely grateful.,happy,0
+"I tried to focus at the library, but everything felt dull.",sad,1
+"After my parents forgot my name, I felt the room go quiet inside me.",sad,1
+The beat dropped and the classroom felt electric.,workout,5
+The library lights dimmed and my eyes felt heavy.,sleep,6
+The playlist shuffle reminded me I'm not okay yet.,sad,1
+Walking to the home with them felt like a movie scene.,romantic,4
+"After new phone, I could run a mile and then some.",workout,5
+Another delay in playlist shuffle; I'm sick of this nonsense.,angry,3
+I put on soft music and let the day exhale.,chill,2
+I need soft sounds tonight; the holiday trip drained me.,sleep,6
+The lab lights dimmed and my eyes felt heavy.,sleep,6
+I need soft sounds tonight; the bus ride drained me.,sleep,6
+My the lecturer texted me and now I feel drowsy.,sleep,6
+Today felt light; even the playlist shuffle tasted better than usual.,happy,0
+"I warned them, but my best friend still played my song. I'm done.",angry,3
+"I tried to focus at the office, but everything felt dull.",sad,1
+Walking to the office with them felt like a movie scene.,romantic,4
+The quiet at the beach is putting me to sleep.,sleep,6
+"After lecture hall, I finally felt my shoulders unclench.",chill,2
+My my parents spilled coffee and now I feel drowsy.,sleep,6
+"I warned them, but my teammate still sent the notes. I'm done.",angry,3
+The morning coffee turned into a small win I really needed.,happy,0
+The beat dropped and the market felt electric.,workout,5
+I saved songs from our gym session for later.,romantic,4
+It's heavy today; the bus ride didn't help at all.,sad,1
+Another delay in traffic jam; I'm sick of this nonsense.,angry,3
+I set big goals today and I'm charging at them.,workout,5
+A small message from the lecturer made my heart warm.,romantic,4
+My patience snapped in that office queue.,angry,3
+The quiet at the studio is putting me to sleep.,sleep,6
+"After sunny afternoon, I just want to curl up and rest.",sleep,6
+Walking to the beach with them felt like a movie scene.,romantic,4
+My the driver brought cake and now I feel drowsy.,sleep,6
+The birthday party reminded me I'm not okay yet.,sad,1
+Walking to the library with them felt like a movie scene.,romantic,4
+It's heavy today; the rainy day didn't help at all.,sad,1
+Walking to the lab with them felt like a movie scene.,romantic,4
+Got good news about morning coffee—it made my whole day.,happy,0
+I can't stop smiling after my sister sent the notes at the canteen.,happy,0
+Got good news about late-night study—it made my whole day.,happy,0
+My my sister just returned my call; I'm genuinely grateful.,happy,0
+I put on soft music and let the day exhale.,chill,2
+"After bus ride, I just want to curl up and rest.",sleep,6
+I was fuming when the driver spilled coffee during holiday trip.,angry,3
+I put on soft music and let the day exhale.,chill,2
+My my parents cancelled plans and now I feel drowsy.,sleep,6
+We shared morning coffee together; it felt effortless.,romantic,4
+I put on soft music and let the day exhale.,chill,2
+Got good news about bus ride—it made my whole day.,happy,0
+My the lecturer just ignored my message; I'm genuinely grateful.,happy,0
+A small message from the cashier made my heart warm.,romantic,4
+I set big goals today and I'm charging at them.,workout,5
+The way things went at the market was unacceptable.,angry,3
+Today felt light; even the late-night study tasted better than usual.,happy,0
+"After evening walk, I finally felt my shoulders unclench.",chill,2
+A quiet hour with my teammate was exactly what I needed.,chill,2
+"After the cashier returned my call, I felt the room go quiet inside me.",sad,1
+"I tried to focus at the classroom, but everything felt dull.",sad,1
+I saved songs from our family dinner for later.,romantic,4
+I was fuming when my neighbor praised my work during family dinner.,angry,3
+The group project turned into a small win I really needed.,happy,0
+We shared late-night study together; it felt effortless.,romantic,4
+It's heavy today; the lecture hall didn't help at all.,sad,1
+Today felt light; even the exam results tasted better than usual.,happy,0
+My my parents spilled coffee and now I feel drowsy.,sleep,6
+The way things went at the lab was unacceptable.,angry,3
+"I warned them, but the cashier still forgot my name. I'm done.",angry,3
+I need soft sounds tonight; the group project drained me.,sleep,6
+Another delay in late-night study; I'm sick of this nonsense.,angry,3
+I need soft sounds tonight; the new phone drained me.,sleep,6
+The exam results turned into a small win I really needed.,happy,0
+I saved songs from our traffic jam for later.,romantic,4
+I need soft sounds tonight; the group project drained me.,sleep,6
+Crushed my rainy day; I'm buzzing with focus.,workout,5
+Walking to the bus stop with them felt like a movie scene.,romantic,4
+We shared group project together; it felt effortless.,romantic,4
+"After a stranger brought cake, I felt the room go quiet inside me.",sad,1
+We shared sunny afternoon together; it felt effortless.,romantic,4
+My my neighbor hyped me up and I’m all in.,workout,5
+The breeze during my sunny afternoon made everything slow down.,chill,2
+I need soft sounds tonight; the gym session drained me.,sleep,6
+"After traffic jam, I just want to curl up and rest.",sleep,6
+"I tried to focus at the bus stop, but everything felt dull.",sad,1
+A quiet hour with my teammate was exactly what I needed.,chill,2
+"After traffic jam, I finally felt my shoulders unclench.",chill,2
+My the cashier spilled coffee and now I feel drowsy.,sleep,6
+I can't stop smiling after my parents played my song at the beach.,happy,0
+The beat dropped and the home felt electric.,workout,5
+I need soft sounds tonight; the new phone drained me.,sleep,6
+The breeze during my late-night study made everything slow down.,chill,2
+"I warned them, but the cashier still spilled coffee. I'm done.",angry,3
+"I warned them, but my parents still brought cake. I'm done.",angry,3
+I need soft sounds tonight; the payday drained me.,sleep,6
+I miss how holiday trip used to make me feel.,sad,1
+We shared rainy day together; it felt effortless.,romantic,4
+Walking to the office with them felt like a movie scene.,romantic,4
+I miss how sunny afternoon used to make me feel.,sad,1
+I put on soft music and let the day exhale.,chill,2
+I miss how traffic jam used to make me feel.,sad,1
+I need soft sounds tonight; the rainy day drained me.,sleep,6
+My my crush hyped me up and I’m all in.,workout,5
+The quiet at the stadium is putting me to sleep.,sleep,6
+I saved songs from our playlist shuffle for later.,romantic,4
+I set big goals today and I'm charging at them.,workout,5
+"After payday, I could run a mile and then some.",workout,5
+My my crush hyped me up and I’m all in.,workout,5
+The late-night study reminded me I'm not okay yet.,sad,1
+It's heavy today; the gym session didn't help at all.,sad,1
+I saved songs from our lecture hall for later.,romantic,4
+Today felt light; even the family dinner tasted better than usual.,happy,0
+I was fuming when my neighbor surprised me during job interview.,angry,3
+"After new phone, I just want to curl up and rest.",sleep,6
+I can't stop smiling after my neighbor forgot my name at the studio.,happy,0
+The breeze during my traffic jam made everything slow down.,chill,2
+"I warned them, but a stranger still spilled coffee. I'm done.",angry,3
+The gym session turned into a small win I really needed.,happy,0
+I put on soft music and let the day exhale.,chill,2
+Walking to the beach with them felt like a movie scene.,romantic,4
+The way things went at the home was unacceptable.,angry,3
+I can't stop smiling after the audience sent the notes at the canteen.,happy,0
+"After exam results, I finally felt my shoulders unclench.",chill,2
+Got good news about gym session—it made my whole day.,happy,0
+A quiet hour with the audience was exactly what I needed.,chill,2
+I can't stop smiling after my teammate cancelled plans at the library.,happy,0
+"I warned them, but my best friend still gave me a ride. I'm done.",angry,3
+Sat near the beach and let the noise drift away.,chill,2
+I miss how payday used to make me feel.,sad,1
+The way things went at the beach was unacceptable.,angry,3
+A quiet hour with my parents was exactly what I needed.,chill,2
+The breeze during my group project made everything slow down.,chill,2
+I saved songs from our family dinner for later.,romantic,4
+I set big goals today and I'm charging at them.,workout,5
+The playlist shuffle turned into a small win I really needed.,happy,0
+"After gym session, I could run a mile and then some.",workout,5
+My a stranger cancelled plans and now I feel drowsy.,sleep,6
+Another delay in bus ride; I'm sick of this nonsense.,angry,3
+The quiet at the beach is putting me to sleep.,sleep,6
+"After evening walk, I could run a mile and then some.",workout,5
+A quiet hour with my boss was exactly what I needed.,chill,2
+The breeze during my birthday party made everything slow down.,chill,2
+"After my boss spilled coffee, I felt the room go quiet inside me.",sad,1
+I put on soft music and let the day exhale.,chill,2
+"After morning coffee, I could run a mile and then some.",workout,5
+The beat dropped and the classroom felt electric.,workout,5
+I miss how morning coffee used to make me feel.,sad,1
+"After group project, I just want to curl up and rest.",sleep,6
+My my parents hyped me up and I’m all in.,workout,5
+We shared holiday trip together; it felt effortless.,romantic,4
+I miss how playlist shuffle used to make me feel.,sad,1
+My patience snapped in that market queue.,angry,3
+The way things went at the beach was unacceptable.,angry,3
+I can't stop smiling after the driver praised my work at the bus stop.,happy,0
+"After my sister texted me, I felt the room go quiet inside me.",sad,1
+The morning coffee turned into a small win I really needed.,happy,0
+I caught a stranger smiling at me and time slowed.,romantic,4
+The beat dropped and the market felt electric.,workout,5
+"After holiday trip, I could run a mile and then some.",workout,5
+My patience snapped in that market queue.,angry,3
+I miss how lecture hall used to make me feel.,sad,1
+The beat dropped and the stadium felt electric.,workout,5
+"I tried to focus at the bus stop, but everything felt dull.",sad,1
+My my crush hyped me up and I’m all in.,workout,5
+Sat near the classroom and let the noise drift away.,chill,2
+Walking to the home with them felt like a movie scene.,romantic,4
+I can't stop smiling after my teammate ignored my message at the classroom.,happy,0
+I can't stop smiling after the lecturer texted me at the library.,happy,0
+"After the cashier sent the notes, I felt the room go quiet inside me.",sad,1
+The quiet at the market is putting me to sleep.,sleep,6
+I was fuming when my teammate texted me during birthday party.,angry,3
+A quiet hour with the cashier was exactly what I needed.,chill,2
+I saved songs from our sunny afternoon for later.,romantic,4
+My patience snapped in that beach queue.,angry,3
+I miss how birthday party used to make me feel.,sad,1
+The way things went at the canteen was unacceptable.,angry,3
+The lab lights dimmed and my eyes felt heavy.,sleep,6
+The breeze during my playlist shuffle made everything slow down.,chill,2
+I saved songs from our exam results for later.,romantic,4
+My the audience surprised me and now I feel drowsy.,sleep,6
+"I tried to focus at the canteen, but everything felt dull.",sad,1
+I put on soft music and let the day exhale.,chill,2
+"I tried to focus at the library, but everything felt dull.",sad,1
+My the audience hyped me up and I’m all in.,workout,5
+"I warned them, but the audience still spilled coffee. I'm done.",angry,3
+I was fuming when the cashier sent the notes during lecture hall.,angry,3
+I put on soft music and let the day exhale.,chill,2
+A quiet hour with my sister was exactly what I needed.,chill,2
+My patience snapped in that home queue.,angry,3
+The quiet at the home is putting me to sleep.,sleep,6
+I caught the lecturer smiling at me and time slowed.,romantic,4
+The beat dropped and the studio felt electric.,workout,5
+I was fuming when the cashier returned my call during job interview.,angry,3
+My patience snapped in that market queue.,angry,3
+The breeze during my bus ride made everything slow down.,chill,2
+A small message from my boss made my heart warm.,romantic,4
+The beach lights dimmed and my eyes felt heavy.,sleep,6
+A small message from the cashier made my heart warm.,romantic,4
+I set big goals today and I'm charging at them.,workout,5
+The breeze during my rainy day made everything slow down.,chill,2
+The quiet at the classroom is putting me to sleep.,sleep,6
+I can't stop smiling after my neighbor forgot my name at the library.,happy,0
+Crushed my holiday trip; I'm buzzing with focus.,workout,5
+"After evening walk, I could run a mile and then some.",workout,5
+My patience snapped in that library queue.,angry,3
+My the driver just played my song; I'm genuinely grateful.,happy,0
+Sat near the classroom and let the noise drift away.,chill,2
+The way things went at the market was unacceptable.,angry,3
+I caught my crush smiling at me and time slowed.,romantic,4
+My the lecturer cancelled plans and now I feel drowsy.,sleep,6
+My patience snapped in that studio queue.,angry,3
+The breeze during my evening walk made everything slow down.,chill,2
+We shared payday together; it felt effortless.,romantic,4
+My my crush just surprised me; I'm genuinely grateful.,happy,0
+The birthday party reminded me I'm not okay yet.,sad,1
+"I tried to focus at the studio, but everything felt dull.",sad,1
+The way things went at the market was unacceptable.,angry,3
+The way things went at the studio was unacceptable.,angry,3
+Walking to the beach with them felt like a movie scene.,romantic,4
+Today felt light; even the rainy day tasted better than usual.,happy,0
+I set big goals today and I'm charging at them.,workout,5
+The beat dropped and the beach felt electric.,workout,5
+My my crush just surprised me; I'm genuinely grateful.,happy,0
+The bus ride turned into a small win I really needed.,happy,0
+The quiet at the classroom is putting me to sleep.,sleep,6
+I put on soft music and let the day exhale.,chill,2
+"After new phone, I could run a mile and then some.",workout,5
+I miss how family dinner used to make me feel.,sad,1
+A quiet hour with a stranger was exactly what I needed.,chill,2
+"I tried to focus at the classroom, but everything felt dull.",sad,1
+My patience snapped in that classroom queue.,angry,3
+I need soft sounds tonight; the sunny afternoon drained me.,sleep,6
+I need soft sounds tonight; the new phone drained me.,sleep,6
+My the lecturer hyped me up and I’m all in.,workout,5
+I was fuming when my teammate texted me during traffic jam.,angry,3
+The home lights dimmed and my eyes felt heavy.,sleep,6
+I saved songs from our birthday party for later.,romantic,4
+Crushed my bus ride; I'm buzzing with focus.,workout,5
+Got good news about sunny afternoon—it made my whole day.,happy,0
+I put on soft music and let the day exhale.,chill,2
+The holiday trip turned into a small win I really needed.,happy,0
+My my crush hyped me up and I’m all in.,workout,5
+"After cricket match, I finally felt my shoulders unclench.",chill,2
+I need soft sounds tonight; the late-night study drained me.,sleep,6
+I was fuming when my sister spilled coffee during family dinner.,angry,3
+I can't stop smiling after my crush surprised me at the classroom.,happy,0
+"I tried to focus at the home, but everything felt dull.",sad,1
+The breeze during my bus ride made everything slow down.,chill,2
+The exam results reminded me I'm not okay yet.,sad,1
+I was fuming when my boss cancelled plans during job interview.,angry,3
+"I tried to focus at the home, but everything felt dull.",sad,1
+A quiet hour with my teammate was exactly what I needed.,chill,2
+Crushed my morning coffee; I'm buzzing with focus.,workout,5
+Crushed my lecture hall; I'm buzzing with focus.,workout,5
+"I warned them, but my parents still surprised me. I'm done.",angry,3
+My the driver hyped me up and I’m all in.,workout,5
+I miss how job interview used to make me feel.,sad,1
+Got good news about traffic jam—it made my whole day.,happy,0
+It's heavy today; the holiday trip didn't help at all.,sad,1
+"After family dinner, I just want to curl up and rest.",sleep,6
+It's heavy today; the sunny afternoon didn't help at all.,sad,1
+I miss how evening walk used to make me feel.,sad,1
+Another delay in bus ride; I'm sick of this nonsense.,angry,3
+My the cashier just praised my work; I'm genuinely grateful.,happy,0
+A small message from the lecturer made my heart warm.,romantic,4
+"After a stranger praised my work, I felt the room go quiet inside me.",sad,1
+I saved songs from our gym session for later.,romantic,4
+My the cashier returned my call and now I feel drowsy.,sleep,6
+The breeze during my cricket match made everything slow down.,chill,2
+I can't stop smiling after the driver forgot my name at the library.,happy,0
+"After sunny afternoon, I finally felt my shoulders unclench.",chill,2
+I caught the cashier smiling at me and time slowed.,romantic,4
+The quiet at the market is putting me to sleep.,sleep,6
+Today felt light; even the birthday party tasted better than usual.,happy,0
+Walking to the lab with them felt like a movie scene.,romantic,4
+I was fuming when my boss praised my work during evening walk.,angry,3
+I need soft sounds tonight; the group project drained me.,sleep,6
+The exam results reminded me I'm not okay yet.,sad,1
+Sat near the market and let the noise drift away.,chill,2
+I set big goals today and I'm charging at them.,workout,5
+I can't stop smiling after my sister brought cake at the office.,happy,0
+"I warned them, but a stranger still cancelled plans. I'm done.",angry,3
+The sunny afternoon turned into a small win I really needed.,happy,0
+I put on soft music and let the day exhale.,chill,2
+"I tried to focus at the home, but everything felt dull.",sad,1
+The beat dropped and the market felt electric.,workout,5
+Crushed my cricket match; I'm buzzing with focus.,workout,5
+Today felt light; even the rainy day tasted better than usual.,happy,0
+Walking to the bus stop with them felt like a movie scene.,romantic,4
+I caught my neighbor smiling at me and time slowed.,romantic,4
+I saved songs from our late-night study for later.,romantic,4
+Crushed my job interview; I'm buzzing with focus.,workout,5
+The breeze during my birthday party made everything slow down.,chill,2
+My a stranger hyped me up and I’m all in.,workout,5
+Walking to the office with them felt like a movie scene.,romantic,4
+The job interview turned into a small win I really needed.,happy,0
+My a stranger just cancelled plans; I'm genuinely grateful.,happy,0
+Sat near the classroom and let the noise drift away.,chill,2
+I put on soft music and let the day exhale.,chill,2
+Got good news about late-night study—it made my whole day.,happy,0
+I can't stop smiling after my teammate forgot my name at the home.,happy,0
+I need soft sounds tonight; the traffic jam drained me.,sleep,6
+Got good news about payday—it made my whole day.,happy,0
+I can't stop smiling after my parents praised my work at the home.,happy,0
+Walking to the canteen with them felt like a movie scene.,romantic,4
+It's heavy today; the lecture hall didn't help at all.,sad,1
+The beat dropped and the library felt electric.,workout,5
+Another delay in rainy day; I'm sick of this nonsense.,angry,3
+Walking to the market with them felt like a movie scene.,romantic,4
+I set big goals today and I'm charging at them.,workout,5
+I was fuming when my sister played my song during gym session.,angry,3
+The playlist shuffle reminded me I'm not okay yet.,sad,1
+I was fuming when my neighbor cancelled plans during job interview.,angry,3
+I was fuming when my parents surprised me during family dinner.,angry,3
+I can't stop smiling after the lecturer cancelled plans at the bus stop.,happy,0
+The beat dropped and the library felt electric.,workout,5
+The job interview turned into a small win I really needed.,happy,0
+I need soft sounds tonight; the late-night study drained me.,sleep,6
+"After gym session, I could run a mile and then some.",workout,5
+"After sunny afternoon, I finally felt my shoulders unclench.",chill,2
+It's heavy today; the cricket match didn't help at all.,sad,1
+"I warned them, but my boss still forgot my name. I'm done.",angry,3
+Crushed my playlist shuffle; I'm buzzing with focus.,workout,5
+The breeze during my birthday party made everything slow down.,chill,2
+My the cashier just texted me; I'm genuinely grateful.,happy,0
+I was fuming when the driver forgot my name during bus ride.,angry,3
+I saved songs from our gym session for later.,romantic,4
+I miss how holiday trip used to make me feel.,sad,1
+"After morning coffee, I could run a mile and then some.",workout,5
+The bus stop lights dimmed and my eyes felt heavy.,sleep,6
+I set big goals today and I'm charging at them.,workout,5
+"After gym session, I finally felt my shoulders unclench.",chill,2
+"I warned them, but my teammate still forgot my name. I'm done.",angry,3
+The playlist shuffle turned into a small win I really needed.,happy,0
+I put on soft music and let the day exhale.,chill,2
+I need soft sounds tonight; the birthday party drained me.,sleep,6
+I need soft sounds tonight; the family dinner drained me.,sleep,6
+The studio lights dimmed and my eyes felt heavy.,sleep,6
+The beat dropped and the beach felt electric.,workout,5
+"After rainy day, I finally felt my shoulders unclench.",chill,2
+My my parents just brought cake; I'm genuinely grateful.,happy,0
+The quiet at the classroom is putting me to sleep.,sleep,6
+A quiet hour with the lecturer was exactly what I needed.,chill,2
+"After playlist shuffle, I finally felt my shoulders unclench.",chill,2
+The quiet at the lab is putting me to sleep.,sleep,6
+My patience snapped in that stadium queue.,angry,3
+We shared family dinner together; it felt effortless.,romantic,4
+"After rainy day, I just want to curl up and rest.",sleep,6
+Another delay in playlist shuffle; I'm sick of this nonsense.,angry,3
+The library lights dimmed and my eyes felt heavy.,sleep,6
+I miss how new phone used to make me feel.,sad,1
+"I tried to focus at the stadium, but everything felt dull.",sad,1
+The new phone reminded me I'm not okay yet.,sad,1
+My a stranger just ignored my message; I'm genuinely grateful.,happy,0
+I put on soft music and let the day exhale.,chill,2
+I saved songs from our payday for later.,romantic,4
+The canteen lights dimmed and my eyes felt heavy.,sleep,6
+Walking to the beach with them felt like a movie scene.,romantic,4
+"I tried to focus at the lab, but everything felt dull.",sad,1
+The quiet at the office is putting me to sleep.,sleep,6
+I put on soft music and let the day exhale.,chill,2
+The way things went at the beach was unacceptable.,angry,3
+A small message from my crush made my heart warm.,romantic,4
+"After my teammate spilled coffee, I felt the room go quiet inside me.",sad,1
+The canteen lights dimmed and my eyes felt heavy.,sleep,6
+My the driver played my song and now I feel drowsy.,sleep,6
+I can't stop smiling after the cashier cancelled plans at the lab.,happy,0
+My my sister hyped me up and I’m all in.,workout,5
+My my boss hyped me up and I’m all in.,workout,5
+Today felt light; even the traffic jam tasted better than usual.,happy,0
+I miss how rainy day used to make me feel.,sad,1
+The quiet at the canteen is putting me to sleep.,sleep,6
+I need soft sounds tonight; the gym session drained me.,sleep,6
+The morning coffee reminded me I'm not okay yet.,sad,1
