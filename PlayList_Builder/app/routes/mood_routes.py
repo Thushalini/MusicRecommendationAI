@@ -1,4 +1,3 @@
-# PlayList_Builder/app/routes/mood_routes.py
 from fastapi import APIRouter
 from pydantic import BaseModel
 from app.mood_detector import detect_mood

@@ -1,5 +1,3 @@
-# app/scoring.py
-
 from typing import Dict, Any, Tuple, Optional
 
 # -------------------------------------------------------------------

@@ -1,4 +1,3 @@
-# app/spotify.py
 import os
 import re
 import random
