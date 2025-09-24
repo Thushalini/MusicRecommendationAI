@@ -165,7 +165,7 @@ if build_btn:
         <div>
           <span class="badge">Mood: {mood_final}</span>
           <span class="badge">Activity: {activity_val or '—'}</span>
-          <span class="badge">Genre/Lang: {genre_final or '—'}</span>
+          <span class="badge">Genre: {genre_final or '—'}</span>
           {'<span class="badge">Auto mood</span>' if auto_mood_badge else ''}
           {'<span class="badge">Auto genre</span>' if auto_genre_badge else ''}
           {'<span class="badge">No explicit</span>' if exclude_explicit else ''}
