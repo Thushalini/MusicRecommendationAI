@@ -20,6 +20,45 @@ API_BASE = os.getenv("AGENTS_API_BASE", "http://127.0.0.1:8000")
 API_KEY  = os.getenv("AGENTS_API_KEY",  "dev-key-change-me")  # must match FastAPI
 
 # ----------------------------------
+# run Fastapi with streamlit
+# ----------------------------------
+
+# --- Auto-start FastAPI backend if not running ---
+import subprocess, sys, socket, time, atexit
+
+def port_open(host: str, port: int) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=0.5):
+            return True
+    except:
+        return False
+
+API_HOST, API_PORT = "127.0.0.1", 8000
+_uvicorn = None
+
+def ensure_backend():
+    global _uvicorn
+    if port_open(API_HOST, API_PORT):
+        return
+    _uvicorn = subprocess.Popen([
+        sys.executable, "-m", "uvicorn", "app.fastapi_agents:app",
+        "--host", API_HOST, "--port", str(API_PORT), "--reload"
+    ])
+    # wait until it’s ready
+    for _ in range(20):
+        if port_open(API_HOST, API_PORT):
+            break
+        time.sleep(0.5)
+
+@atexit.register
+def stop_backend():
+    if _uvicorn and _uvicorn.poll() is None:
+        _uvicorn.terminate()
+
+# call it before using API
+ensure_backend()
+
+# ----------------------------------
 # Page config & simple styles
 # ----------------------------------
 st.set_page_config(
