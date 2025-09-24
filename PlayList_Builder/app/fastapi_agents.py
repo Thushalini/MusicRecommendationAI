@@ -10,6 +10,10 @@ from dotenv import load_dotenv, find_dotenv
 from app.mood_detector import detect_mood as detect_mood_agent
 from app.llm_helper import classify_genre
 from app.routes.mood_routes import router as mood_router
+
+from app.mood_detector import _MODEL, MODEL_PATH
+from fastapi import APIRouter, Depends
+router = APIRouter()
 # ----------------------------------
 # Load env (.env in project folder)
 # ----------------------------------
@@ -90,13 +94,32 @@ def health():
 # ----------------------------------
 # Endpoints
 # ----------------------------------
+
+@router.get("/mood/model_status")
+def mood_model_status():
+    loaded = _MODEL is not None
+    labels = _MODEL.get("labels") if loaded else []
+    return {
+        "loaded": loaded,
+        "path": MODEL_PATH,
+        "labels": labels,
+        "type": "tfidf+logreg" if loaded else "lexicon"
+    }
+
+app.include_router(router)
+
 @app.post("/mood", response_model=MoodResponse, dependencies=[Depends(require_api_key)])
 def api_mood(inp: TextInput):
     txt = (inp.text or "").strip()
     if not txt or len(txt) > 800:
         raise HTTPException(status_code=400, detail="Text must be 1..800 characters.")
-    mood, conf = detect_mood_agent(txt)
-    return MoodResponse(mood=mood, confidence=float(conf))
+    m_raw = detect_mood_agent(txt)
+    if isinstance(m_raw, (list, tuple)):
+        mood  = str(m_raw[0]) if len(m_raw) > 0 else "unknown"
+        m_conf = float(m_raw[1]) if len(m_raw) > 1 else 0.5
+    else:
+        mood, m_conf = str(m_raw), 0.5
+    return MoodResponse(mood=mood, confidence=m_conf)
 
 @app.post("/genre", response_model=GenreResponse, dependencies=[Depends(require_api_key)])
 def api_genre(inp: TextInput):
