@@ -8,6 +8,7 @@ import requests
 import streamlit as st
 from dotenv import load_dotenv
 from typing import Any, Dict, List, Optional
+import joblib # Import joblib for model loading
 
 from app.spotify import generate_playlist_from_user_settings
 from app.llm_helper import generate_playlist_description  # optional; wrapped in try/except
@@ -21,6 +22,38 @@ load_dotenv(dotenv_path, override=False)
 
 API_BASE = os.getenv("AGENTS_API_BASE", "http://127.0.0.1:8000")
 API_KEY  = os.getenv("AGENTS_API_KEY",  "dev-key-change-me")
+
+# --- MOOD-TO-GENRE MAPPING ---
+# This map helps classify genres based on the detected mood, fulfilling the requirement
+# to classify genres according to the detected mood using Agentic AI's output.
+MOOD_TO_GENRE_MAP = {
+    "happy": "pop",
+    "sad": "blues",
+    "energetic": "hip hop",
+    "chill": "lofi",
+    "focus": "classical",
+    "romantic": "acoustic",
+    "angry": "rock",
+    "calm": "ambient",
+}
+
+# --- Load Local Genre Model ---
+GENRE_MODEL_PATH = "models/genre_classifier.joblib"
+loaded_genre_model = None
+loaded_genre_labels = None
+
+try:
+    # Check if the model file exists before attempting to load
+    if os.path.exists(GENRE_MODEL_PATH):
+        with open(GENRE_MODEL_PATH, 'rb') as f:
+            model_data = joblib.load(f)
+            loaded_genre_model = model_data["pipeline"]
+            loaded_genre_labels = model_data["labels"]
+            print(f"Successfully loaded local genre model from {GENRE_MODEL_PATH}")
+    else:
+        print(f"Genre model not found at {GENRE_MODEL_PATH}. Will rely on API for genre.")
+except Exception as e:
+    print(f"Error loading genre model from {GENRE_MODEL_PATH}: {e}. Will rely on API for genre.")
 
 # -----------------------------
 # Page config
@@ -97,6 +130,20 @@ if "selected_saved_id" not in st.session_state:
 def call_analyzer(text: str) -> Optional[dict]:
     if not (text or "").strip():
         return None
+    
+    local_genre = None
+    # Try to use the local genre model if available
+    if loaded_genre_model and loaded_genre_labels:
+        try:
+            # Predict genre using the local model
+            predicted_genre = loaded_genre_model.predict([text])[0]
+            local_genre = predicted_genre
+        except Exception as e:
+            print(f"Error predicting genre with local model: {e}")
+            # Fallback to API if local prediction fails
+            pass
+
+    # API call for mood (and potentially genre if local model fails or is not used)
     try:
         r = requests.post(
             f"{API_BASE}/analyze",
@@ -104,9 +151,18 @@ def call_analyzer(text: str) -> Optional[dict]:
             headers={"x-api-key": API_KEY},
             timeout=10,
         )
-        return r.json() if r.ok else None
+        api_result = r.json() if r.ok else None
+        auto_mood = api_result.get("mood") if api_result else None
+        auto_genre_from_api = api_result.get("genre") if api_result else None
     except Exception:
-        return None
+        api_result = None
+        auto_mood = None
+        auto_genre_from_api = None
+
+    # Combine results: prioritize local genre if available, otherwise use API genre
+    final_genre = local_genre if local_genre else auto_genre_from_api
+
+    return {"mood": auto_mood, "genre": final_genre, "local_genre": local_genre} # Return local_genre too for debug
 
 def render_tracks(items: List[Dict[str, Any]]):
     st.markdown('<div class="grid">', unsafe_allow_html=True)
@@ -205,11 +261,6 @@ with st.sidebar:
         index=1,
     )
 
-    genre_or_language = st.text_input(
-        "Genre",
-        placeholder="hip hop, r&b, lofi"
-    )
-
     prefer_auto = st.toggle("Prefer auto-detected genre if available", value=True)
     exclude_explicit = st.toggle("Exclude explicit lyrics", value=False)
     limit = st.slider("Tracks per playlist", 5, 20, 12)
@@ -255,21 +306,44 @@ with tab_build:
             s.write("Step 1 • Analyzing your preferences (mood/genre hints)")
             analysis = call_analyzer(vibe_description)
             auto_mood = (analysis or {}).get("mood")
-            auto_genre = (analysis or {}).get("genre")
+            auto_genre_from_api = (analysis or {}).get("genre") # Renamed for clarity
+            local_genre_from_call = (analysis or {}).get("local_genre") # Get local genre from call_analyzer
 
             mood_final = None if mood == "Auto-detect" else mood
             if mood_final is None:
                 mood_final = auto_mood or "happy"
 
-            genre_final = (genre_or_language or "").strip()
-            if prefer_auto and not genre_final:
-                genre_final = (auto_genre or "").strip()
+            # --- REVISED GENRE LOGIC ---
+            # Determine genre_final based on auto_mood, local model, API, or defaults.
+            genre_final = "" 
+            derived_genre = None 
+
+            # Try to derive genre from mood using the map
+            if auto_mood and auto_mood in MOOD_TO_GENRE_MAP:
+                derived_genre = MOOD_TO_GENRE_MAP[auto_mood]
+            
+            # Determine the final genre
+            if derived_genre:
+                genre_final = derived_genre
+            elif local_genre_from_call: # Prioritize local model prediction if available
+                genre_final = local_genre_from_call
+            elif auto_genre_from_api: # Fallback to API's genre if mood mapping fails or local model fails
+                genre_final = auto_genre_from_api
+            else:
+                genre_final = "pop" # Default genre if all else fails
+            # --- END REVISED GENRE LOGIC ---
 
             if show_debug:
-                st.code(json.dumps(
-                    {"analysis": analysis, "mood_final": mood_final, "genre_final": genre_final},
-                    indent=2
-                ), language="json")
+                debug_info = {
+                    "analysis": analysis,
+                    "mood_final": mood_final,
+                    "genre_final": genre_final,
+                    "derived_genre_from_mood": derived_genre, 
+                    "auto_mood": auto_mood,
+                    "auto_genre_from_api": auto_genre_from_api,
+                    "local_genre_prediction": local_genre_from_call
+                }
+                st.code(json.dumps(debug_info, indent=2), language="json")
 
             # Step 2: fetch & score tracks
             s.update(label="Crafting your playlist • Retrieving candidates and scoring")
@@ -280,7 +354,7 @@ with tab_build:
                     vibe_description=vibe_description,
                     mood=mood_final,
                     activity=("" if activity == "none" else activity),
-                    genre_or_language=genre_final,
+                    genre_or_language=genre_final, # Use the determined genre_final
                     tracks_per_playlist=limit,
                     used_ids=st.session_state.used_track_ids,
                     seed=42,
@@ -318,7 +392,7 @@ with tab_build:
                 "desc": desc,
                 "mood_final": mood_final,
                 "activity_final": (activity if activity != "none" else None),
-                "genre_final": (genre_final or None),
+                "genre_final": genre_final, # Store the final genre used
                 "vibe_description": vibe_description,
                 "exclude_explicit": exclude_explicit,
                 "limit": limit,
