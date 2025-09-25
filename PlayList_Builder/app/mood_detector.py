@@ -21,7 +21,7 @@ except Exception as e:
 # Lightweight lexicon fallback
 MOOD_LEXICON: Dict[str, set[str]] = {
     "happy": {"happy","joy","excited","fun","party","energetic","dance","vibe","good","great","cheerful","uplift","smile"},
-    "sad": {"sad","down","blue","depressed","cry","lonely","heartbroken","miss","nostalgic","slow","melancholy","exhausted"},
+    "sad": {"sad","down","not happy","blue","depressed","cry","lonely","heartbroken","miss","nostalgic","slow","melancholy","exhausted"},
     "chill": {"chill","calm","relax","lofi","coffee","study","focus","mellow","soft","ambient","smooth","peaceful"},
     "angry": {"angry","mad","rage","furious","aggressive","metal","hard","scream"},
     "energetic": {"hype","pump","fast","high bpm","edm","electro","jump","power","workout"},
