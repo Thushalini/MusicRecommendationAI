@@ -57,12 +57,24 @@ section[data-testid="stSidebar"] .stMarkdown, section[data-testid="stSidebar"] p
 .stMultiSelect div[data-baseweb="select"]>div {
   background: rgba(255,255,255,.04)!important; color:var(--text)!important; border:var(--border)!important; border-radius:12px!important;
 }
+
+/* Default buttons (all buttons outside sidebar stay the same) */
 .stButton button{
-  background:var(--primary)!important; color:#0b0d0f!important; font-weight:700!important; border-radius:12px!important;
+  background:var(--primary)!important; color:#000000!important; font-weight:700!important; border-radius:12px!important;
   padding:10px 16px!important; border:none!important; transition:transform .08s ease, box-shadow .08s ease;
 }
 .stButton button:hover{ transform:translateY(-1px); box-shadow:0 8px 24px #1db95433; }
 .stButton button:active{ transform:translateY(0) scale(.99); }
+
+/* ONLY the Generate Playlist button in the sidebar */
+section[data-testid="stSidebar"] div.stButton > button{
+  color:#000000 !important;              /* black text */
+  -webkit-text-fill-color:#000000 !important; /* force on WebKit */
+  text-shadow:none !important;
+  font-weight:800 !important;
+  font-size:16px !important;
+  mix-blend-mode: normal !important;
+}
 
 .badges{ display:flex; flex-wrap:wrap; gap:.4rem; margin:.3rem 0 .2rem; }
 .badge{ display:inline-flex; align-items:center; gap:.35rem; border:var(--border); color:var(--muted);
