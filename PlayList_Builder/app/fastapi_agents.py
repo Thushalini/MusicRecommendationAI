@@ -10,7 +10,7 @@ from app.mood_detector import detect_mood as detect_mood_agent
 from app.llm_helper import classify_genre
 from app.routes.mood_routes import router as mood_router
 
-from app.mood_detector import _MODEL, MODEL_PATH
+from app.mood_detector import MODEL_PATH, _PIPELINE as _MODEL
 from fastapi import APIRouter, Depends
 router = APIRouter()
 # ----------------------------------

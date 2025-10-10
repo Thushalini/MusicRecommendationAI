@@ -1,4 +1,3 @@
-# streamlit_app.py
 # Modern UI + Persistent generated playlist + Save/Load to .appdata/saved_playlists.json
 # (no score filtering; save uses session_state so UI doesn't vanish on click)
 
