@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from typing import Any, Dict, List, Optional, Tuple
 
 from app.spotify import generate_playlist_from_user_settings
-from app.llm_helper import generate_playlist_description  # optional; wrapped in try/except
+from app.llm_helper import generate_playlist_description  
 from app.datastore import save_playlist, list_playlists, load_playlist, delete_playlist
 
 # -----------------------------
@@ -34,16 +34,16 @@ st.set_page_config(
 # -----------------------------
 # Styles
 # -----------------------------
-st.markdown("""
-<style>
-/* Hide only unwanted page links in the sidebar nav */
-div[data-testid="stSidebarNav"] li a[href*="Main"] {display: none !important;}
-div[data-testid="stSidebarNav"] li a[href*="streamlit_app"] {display: none !important;}
+# st.markdown("""
+# <style>
+# /* Hide only unwanted page links in the sidebar nav */
+# div[data-testid="stSidebarNav"] li a[href*="Main"] {display: none !important;}
+# div[data-testid="stSidebarNav"] li a[href*="streamlit_app"] {display: none !important;}
 
-/* Optional: adjust top padding for a cleaner look */
-section[data-testid="stSidebar"] > div:first-child {padding-top: 0 !important;}
-</style>
-""", unsafe_allow_html=True)
+# /* Optional: adjust top padding for a cleaner look */
+# section[data-testid="stSidebar"] > div:first-child {padding-top: 0 !important;}
+# </style>
+# """, unsafe_allow_html=True)
 
 
 st.markdown(
@@ -131,54 +131,6 @@ def call_analyzer(text: str) -> Optional[dict]:
     except Exception:
         return None
 
-def _read_fused_mood() -> Tuple[Optional[str], Optional[float], Optional[dict]]:
-    """
-    Returns (mood, confidence, parts) if set by moodUI, else (None, None, None).
-    Supported sources:
-      - st.session_state["fused_mood_payload"] = {"mood": str, "confidence": float, "parts": {...}}
-      - URL params: ?fused_mood=happy&fused_conf=0.82&fused_parts=<json>
-                    or           ?mood=happy&conf=0.82&parts=<json>
-    """
-    # 1) session state
-    payload = st.session_state.get("fused_mood_payload")
-    if isinstance(payload, dict) and payload.get("mood"):
-        return payload.get("mood"), payload.get("confidence"), payload.get("parts", {})
-
-    # 2) URL params
-    try:
-        qp = getattr(st, "query_params", None)
-        qp = qp if qp is not None else st.experimental_get_query_params()
-        if qp:
-            def _first(key_a, key_b=None):
-                for k in [key_a, key_b] if key_b else [key_a]:
-                    if isinstance(qp.get(k), list):
-                        return qp.get(k)[0]
-                    if qp.get(k) is not None:
-                        return qp.get(k)
-                return None
-
-            mood = _first("fused_mood", "mood")
-            conf = _first("fused_conf", "conf")
-            parts = _first("fused_parts", "parts")
-
-            mood = str(mood).strip() if mood else None
-            conf = float(conf) if conf not in (None, "") else None
-
-            if parts:
-                try:
-                    parts = json.loads(parts)
-                except Exception:
-                    parts = {}
-            else:
-                parts = {}
-
-            if mood:
-                return mood, conf, parts
-    except Exception:
-        pass
-
-    return None, None, None
-
 def render_tracks(items: List[Dict[str, Any]]):
     st.markdown('<div class="grid">', unsafe_allow_html=True)
     for item in items:
@@ -257,6 +209,7 @@ with c2:
 with st.sidebar:
     st.subheader("Playlist Settings")
 
+    # --- Vibe text ---
     vibe_description = st.text_area(
         "Describe your vibe",
         value=st.session_state.get("vibe_prefill", ""),
@@ -264,31 +217,58 @@ with st.sidebar:
         height=110,
     )
 
-    # ← NEW: read fused mood sent from moodUI.py (session_state or ?mood=)
-    def _read_fused_mood():
-        m = st.session_state.get("fused_mood")
-        if not m:
-            try:
-                qp = getattr(st, "query_params", None)
-                qp = qp if qp is not None else st.experimental_get_query_params()
-                m = (qp.get("mood",[None])[0] if isinstance(qp.get("mood"), list) else qp.get("mood"))
-            except Exception:
-                m = None
-        return (m or "").strip() or None
+    # --- Read fused mood from session (preferred) or ?mood= fallback ---
+    def _read_fused_mood_label() -> str | None:
+        lbl = st.session_state.get("fused_mood_label")
+        if lbl:
+            return str(lbl).strip()
+        # fallback: query param ?mood=happy
+        try:
+            qp = getattr(st, "query_params", None)
+            qp = qp if qp is not None else st.experimental_get_query_params()
+            if isinstance(qp.get("mood"), list):
+                return (qp.get("mood", [None])[0] or "").strip() or None
+            return (qp.get("mood") or "").strip() or None
+        except Exception:
+            return None
 
-    fused_mood = _read_fused_mood()
+    fused_label = _read_fused_mood_label()
+    fused_conf  = st.session_state.get("fused_mood_conf")
 
-    mood_options = ["Auto-detect", "happy", "sad", "energetic", "chill", "focus", "romantic", "angry", "calm"]
-    mood_index = 0
-    if fused_mood in mood_options:
-        mood_index = mood_options.index(fused_mood)
+    # --- Mood source + value ---
+    mood_options = ["happy","sad","energetic","chill","focus","romantic","angry","calm"]
+    use_quiz = st.radio(
+        "Use mood from",
+        ["Quiz (recommended)", "Manual"],
+        index=0 if fused_label else 1,
+        horizontal=True,
+        key="mood_source_radio",
+    )
 
-    mood = st.selectbox("Mood", mood_options, index=mood_index)
+    if use_quiz == "Quiz (recommended)":
+        effective_mood = fused_label or "chill"
+        # Show last fused mood (and confidence if present)
+        if fused_label:
+            st.caption(
+                f'From quiz: **{fused_label}**'
+                + (f" (conf {fused_conf})" if fused_conf is not None else "")
+            )
 
-    # Print it right under the selectbox
-    if fused_mood:
-        st.caption(f"Last fused mood: **{fused_mood}**")
+        if st.button("🧩 Take / retake quiz"):
+            st.switch_page("pages/mood_ui.py")  # or "mood_ui.py" if the file is at root
 
+        # Optional: also show a link (opens in same tab)
+        st.page_link("pages/mood_ui.py", label="Open mood quiz page")
+    else:
+        # Manual override
+        manual_index = mood_options.index(fused_label) if fused_label in mood_options else 3
+        manual_mood = st.selectbox("Select mood", mood_options, index=manual_index, key="manual_mood_select")
+        effective_mood = manual_mood
+
+    # Persist the chosen mood for the builder
+    st.session_state["effective_mood"] = effective_mood
+
+    # --- Activity / other settings ---
     activity = st.selectbox(
         "Activity",
         ["workout", "study", "party", "relax", "commute", "sleep", "none"],
@@ -298,8 +278,10 @@ with st.sidebar:
     prefer_auto = st.toggle("Prefer auto-detected genre if available", value=True)
     exclude_explicit = st.toggle("Exclude explicit lyrics", value=False)
     limit = st.slider("Tracks per playlist", 5, 20, 12)
+
     with st.expander("Advanced"):
         show_debug = st.checkbox("Show analyzer debug", value=False)
+
     go = st.button("Generate Playlist", use_container_width=True, key="btn_generate")
 
 # -----------------------------
@@ -340,9 +322,11 @@ with tab_build:
             auto_mood = (analysis or {}).get("mood")
             auto_genre = (analysis or {}).get("genre")
 
-            mood_final = None if mood == "Auto-detect" else mood
+            selected = st.session_state.get("effective_mood")  # from sidebar radio/select
+            mood_final = None if (not selected or selected == "Auto-detect") else selected
             if mood_final is None:
-                mood_final =fused_mood or auto_mood or "chill"
+                # fallbacks: analyzer → fused label from sidebar → default
+                mood_final = auto_mood or st.session_state.get("fused_mood_label") or "chill"
 
             genre_final = (genre_or_language or "").strip()
             if prefer_auto and not genre_final:

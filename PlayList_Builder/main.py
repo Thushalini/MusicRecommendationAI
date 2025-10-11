@@ -1,7 +1,7 @@
 import streamlit as st
 st.set_page_config(page_title="Music Rec AI", page_icon="🎧", layout="wide")
 st.title("Welcome 👋 to Music Recommendation AI")
-st.page_link("pages/moodUI.py", label="Analyse your mood", icon="🎚️")
+st.page_link("pages/mood_ui.py", label="Quiz", icon="❓")
 st.page_link("pages/streamlit_app.py", label="Playlist", icon="🎵")
 
 st.markdown("""

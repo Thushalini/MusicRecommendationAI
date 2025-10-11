@@ -14,7 +14,7 @@ from app.mood_detector import MODEL_PATH, _PIPELINE as _MODEL
 # OPTIONAL fusion helpers (color/emoji/SAM/quiz). Keep try/except to avoid crashes if files are missing.
 try:
     from app.mood_fusion import fuse_mood as fuse_mood_helper
-    from app.mood_signals import color_signal, emoji_signal, sam_to_mood, quiz_signal
+    from app.mood_signals import color_signal, emoji_signal, sam_to_mood, quiz_signal, rg_quiz_signal
     _HAS_FUSION = True
 except Exception:
     _HAS_FUSION = False
@@ -98,6 +98,7 @@ class FuseInput(BaseModel):
     arousal: Optional[float] = None
     # quiz: arbitrary dict like {"q1":"A", "q2":3, ...}
     quiz: Optional[Dict[str, Any]] = None
+    rg_quiz: Optional[Dict[str, Any]] = None
 
 class FuseResponse(BaseModel):
     mood: str
@@ -212,75 +213,86 @@ def api_analyze(inp: TextInput):
 @app.post("/mood/fuse", response_model=FuseResponse, dependencies=[Depends(require_api_key)])
 def api_mood_fuse(inp: FuseInput):
     """
-    Accepts text plus optional {color, emoji, valence, arousal, quiz} and returns a fused mood.
-    Uses app.mood_fusion + app.mood_signals if available; otherwise falls back to text-only mood.
+    Accepts text plus optional {color, emoji, valence, arousal, quiz, rg_quiz} and returns a fused mood.
     """
-    if (inp.text is None or not str(inp.text).strip()) and not any([inp.color, inp.emoji, inp.valence, inp.arousal, inp.quiz]):
-        raise HTTPException(status_code=400, detail="Provide at least text or one side-signal (color/emoji/SAM/quiz).")
+    if (inp.text is None or not str(inp.text).strip()) and not any([inp.color, inp.emoji, inp.valence, inp.arousal, inp.quiz, inp.rg_quiz]):
+        raise HTTPException(status_code=400, detail="Provide at least text or one side-signal (color/emoji/SAM/quiz/RG quiz).")
 
-    # 1) TEXT signal (always try)
+    # --- 1) TEXT signal --------------------------------------------------------
     text_label, text_conf, text_scores = "unknown", 0.5, {}
     if inp.text:
         m_raw = detect_mood_agent(str(inp.text).strip())
         if isinstance(m_raw, (list, tuple)):
             text_label = str(m_raw[0]) if len(m_raw) > 0 else "unknown"
             text_conf  = float(m_raw[1]) if len(m_raw) > 1 else 0.5
-            # If scores provided as 3rd tuple item
             if len(m_raw) > 2 and isinstance(m_raw[2], dict):
                 text_scores = m_raw[2]
         elif isinstance(m_raw, dict):
-            text_label = str(m_raw.get("label", "unknown"))
-            text_conf  = float(m_raw.get("confidence", 0.5))
+            text_label  = str(m_raw.get("label", "unknown"))
+            text_conf   = float(m_raw.get("confidence", 0.5))
             text_scores = dict(m_raw.get("scores", {}))
         else:
             text_label, text_conf = str(m_raw), 0.5
 
-    # 2) SIDE SIGNALS (robust to missing helpers)
-    color_scores = emoji_scores = sam_scores = quiz_scores = {}
+    # --- 2) SIDE SIGNALS -------------------------------------------------------
+    color_scores = {}
+    emoji_scores = {}
+    sam_scores   = {}
+    quiz_scores  = {}   # tiny 3Q quiz → dist over MOODS
+    rg_dist      = {}   # RG 10Q quiz → dist over MOODS
+    rg_final     = None # {"label","x","y","confidence","method":"quiz_rg"}
+
     if _HAS_FUSION:
         if inp.color:
-            try:
-                color_scores = color_signal(inp.color)
-            except Exception:
-                color_scores = {}
-        if inp.emoji:
-            try:
-                emoji_scores = emoji_signal(inp.emoji)
-            except Exception:
-                emoji_scores = {}
-        if inp.valence is not None and inp.arousal is not None:
-            try:
-                sam_scores = sam_to_mood(float(inp.valence), float(inp.arousal))
-            except Exception:
-                sam_scores = {}
-        if inp.quiz:
-            try:
-                quiz_scores = quiz_signal(dict(inp.quiz))
-            except Exception:
-                quiz_scores = {}
+            try: color_scores = color_signal(inp.color)
+            except Exception: color_scores = {}
 
-    # 3) FUSE (if helpers exist); else fallback to text
+        if inp.emoji:
+            try: emoji_scores = emoji_signal(inp.emoji)
+            except Exception: emoji_scores = {}
+
+        if inp.valence is not None and inp.arousal is not None:
+            try: sam_scores = sam_to_mood(float(inp.valence), float(inp.arousal))
+            except Exception: sam_scores = {}
+
+        if inp.quiz:
+            try: quiz_scores = quiz_signal(dict(inp.quiz))
+            except Exception: quiz_scores = {}
+
+        # NEW: RG quiz (primary)
+        if getattr(inp, "rg_quiz", None):
+            try:
+                out = rg_quiz_signal({"quiz": dict(inp.rg_quiz)})
+                rg_final = out.get("final")
+                rg_dist  = out.get("dist", {})
+            except Exception:
+                rg_final, rg_dist = None, {}
+
+    # --- 3) FUSE ---------------------------------------------------------------
     if _HAS_FUSION:
         try:
+            # Pass RG distribution as an extra channel (if your fuser supports kwargs, add it).
             fused = fuse_mood_helper(
                 text_scores=text_scores or {text_label: text_conf},
                 color_scores=color_scores,
                 emoji_scores=emoji_scores,
                 sam_scores=sam_scores,
                 quiz_scores=quiz_scores,
+                rg_quiz_scores=rg_dist,  # safe to pass empty {}
             )
-            # expected return: (label, confidence, parts) or dict
+
             if isinstance(fused, (list, tuple)) and len(fused) >= 2:
-                final_label = str(fused[0])
-                final_conf  = float(fused[1])
+                final_label = str(fused[0]); final_conf = float(fused[1])
                 parts = fused[2] if len(fused) > 2 and isinstance(fused[2], dict) else {
-                    "text": text_scores, "color": color_scores, "emoji": emoji_scores, "sam": sam_scores, "quiz": quiz_scores
+                    "text": text_scores, "color": color_scores, "emoji": emoji_scores,
+                    "sam": sam_scores, "quiz": quiz_scores, "rg_quiz": rg_dist
                 }
             elif isinstance(fused, dict):
                 final_label = str(fused.get("label", text_label))
                 final_conf  = float(fused.get("confidence", text_conf))
                 parts = dict(fused.get("parts", {
-                    "text": text_scores, "color": color_scores, "emoji": emoji_scores, "sam": sam_scores, "quiz": quiz_scores
+                    "text": text_scores, "color": color_scores, "emoji": emoji_scores,
+                    "sam": sam_scores, "quiz": quiz_scores, "rg_quiz": rg_dist
                 }))
             else:
                 final_label, final_conf = text_label, text_conf
@@ -291,5 +303,15 @@ def api_mood_fuse(inp: FuseInput):
     else:
         final_label, final_conf = text_label, text_conf
         parts = {"text": text_scores}
+
+    # --- 4) Prefer RG quiz as primary label if present -------------------------
+    if rg_final and isinstance(rg_final, dict):
+        rg_label = str(rg_final.get("label", "") or "").strip()
+        rg_conf  = float(rg_final.get("confidence", 0.9))
+        if rg_label:
+            # Override to ensure RG is the main method
+            final_label = rg_label
+            final_conf  = max(final_conf, rg_conf)
+            parts["rg_quiz_final"] = rg_final
 
     return FuseResponse(mood=final_label, confidence=final_conf, parts=parts)
