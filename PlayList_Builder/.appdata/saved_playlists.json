@@ -1,0 +1,167 @@
+[
+  {
+    "id": "20251006-161755-acba12",
+    "title": "chill · study · pop",
+    "created_at": "2025-10-06T16:17:55",
+    "request": {
+      "vibe_description": "morning jog, uplifting pop, fresh vibes",
+      "mood": "chill",
+      "activity": "study",
+      "genre_or_language": "pop",
+      "exclude_explicit": false,
+      "limit": 12
+    },
+    "description": "A chill playlist tailored for study. Smooth flow and consistent vibe curated from the selected tracks.",
+    "tracks": [
+      {
+        "id": "2irZSp4VpV071FQHBOwn7h",
+        "name": "Poptard",
+        "artists": [
+          "Benny Jamz",
+          "Noah Carter"
+        ],
+        "album": "Calirose",
+        "spotify_url": "https://open.spotify.com/track/2irZSp4VpV071FQHBOwn7h",
+        "preview_url": null,
+        "score": 0.0987394960775219,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "2pAiuBdD0w12lOT8c3YbjY",
+        "name": "Shree Hanuman Chalisa",
+        "artists": [
+          "Hariharan"
+        ],
+        "album": "Morning Hanuman Bhajans",
+        "spotify_url": "https://open.spotify.com/track/2pAiuBdD0w12lOT8c3YbjY",
+        "preview_url": null,
+        "score": 0.07568280986471121,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "7qMRmcVM1ki7z6YgiPmXrU",
+        "name": "Monday Morning Faith",
+        "artists": [
+          "SEU Worship",
+          "Chelsea Plank"
+        ],
+        "album": "Heart Cry",
+        "spotify_url": "https://open.spotify.com/track/7qMRmcVM1ki7z6YgiPmXrU",
+        "preview_url": null,
+        "score": 0.07272931061753427,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "32F0zqsDgqpIEYApk2b8sr",
+        "name": "Pure Morning",
+        "artists": [
+          "Placebo"
+        ],
+        "album": "Without You I'm Nothing",
+        "spotify_url": "https://open.spotify.com/track/32F0zqsDgqpIEYApk2b8sr",
+        "preview_url": null,
+        "score": 0.06705981737394251,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "0awZMpokrVSdvtYe1MdcWM",
+        "name": "Morning Glory - Remastered",
+        "artists": [
+          "Oasis"
+        ],
+        "album": "(What's The Story) Morning Glory? [Remastered]",
+        "spotify_url": "https://open.spotify.com/track/0awZMpokrVSdvtYe1MdcWM",
+        "preview_url": null,
+        "score": 0.06575284128389935,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "1Wcr8zrKqbUX0zwN8Dbr16",
+        "name": "In the morning",
+        "artists": [
+          "ITZY"
+        ],
+        "album": "GUESS WHO",
+        "spotify_url": "https://open.spotify.com/track/1Wcr8zrKqbUX0zwN8Dbr16",
+        "preview_url": null,
+        "score": 0.06235339392825868,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "6nRGPf5tpeJtKpXZO5cgIT",
+        "name": "Paro",
+        "artists": [
+          "Aditya Rikhari",
+          "UNPLG'd"
+        ],
+        "album": "Paro",
+        "spotify_url": "https://open.spotify.com/track/6nRGPf5tpeJtKpXZO5cgIT",
+        "preview_url": null,
+        "score": 0.059711675224776585,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "6ic8OlLUNEATToEFU3xmaH",
+        "name": "Gimme More",
+        "artists": [
+          "Britney Spears"
+        ],
+        "album": "Blackout",
+        "spotify_url": "https://open.spotify.com/track/6ic8OlLUNEATToEFU3xmaH",
+        "preview_url": null,
+        "score": 0.05950763443850141,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "4cBm8rv2B5BJWU2pDaHVbF",
+        "name": "Multo",
+        "artists": [
+          "Cup of Joe"
+        ],
+        "album": "Multo",
+        "spotify_url": "https://open.spotify.com/track/4cBm8rv2B5BJWU2pDaHVbF",
+        "preview_url": null,
+        "score": 0.058069311144119874,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "4wJ5Qq0jBN4ajy7ouZIV1c",
+        "name": "APT.",
+        "artists": [
+          "ROSÉ",
+          "Bruno Mars"
+        ],
+        "album": "rosie",
+        "spotify_url": "https://open.spotify.com/track/4wJ5Qq0jBN4ajy7ouZIV1c",
+        "preview_url": null,
+        "score": 0.05796290250369464,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "5K5VSU20FqOLwzGNlOdgPH",
+        "name": "Numba Langa",
+        "artists": [
+          "Yohani"
+        ],
+        "album": "Kella",
+        "spotify_url": "https://open.spotify.com/track/5K5VSU20FqOLwzGNlOdgPH",
+        "preview_url": null,
+        "score": 0.05769368771105147,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "1oFAF1hdPOickyHgbuRjyX",
+        "name": "Save Your Tears (Remix) (with Ariana Grande) - Bonus Track",
+        "artists": [
+          "The Weeknd",
+          "Ariana Grande"
+        ],
+        "album": "After Hours (Deluxe)",
+        "spotify_url": "https://open.spotify.com/track/1oFAF1hdPOickyHgbuRjyX",
+        "preview_url": null,
+        "score": 0.05768965811296899,
+        "reason": "features unavailable"
+      }
+    ]
+  }
+]

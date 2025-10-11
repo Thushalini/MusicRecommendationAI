@@ -1,20 +1,33 @@
-from typing import Optional, List
+# app/fastapi_agents.py
+from typing import Optional, List, Dict, Any
 import os
 
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Header, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv, find_dotenv
 
 from app.mood_detector import detect_mood as detect_mood_agent
 from app.llm_helper import classify_genre
-from app.routes.mood_routes import router as mood_router
+from app.mood_detector import MODEL_PATH, _PIPELINE as _MODEL
 
-from app.mood_detector import _MODEL, MODEL_PATH
-from fastapi import APIRouter, Depends
-router = APIRouter()
+# OPTIONAL fusion helpers (color/emoji/SAM/quiz). Keep try/except to avoid crashes if files are missing.
+try:
+    from app.mood_fusion import fuse_mood as fuse_mood_helper
+    from app.mood_signals import color_signal, emoji_signal, sam_to_mood, quiz_signal
+    _HAS_FUSION = True
+except Exception:
+    _HAS_FUSION = False
+
+# If you already have a router in app/routes/mood_routes.py that exposes /mood/fuse,
+# you can still include it below. This file also exposes /mood/fuse directly.
+try:
+    from app.routes.mood_routes import router as mood_router
+except Exception:
+    mood_router = None
+
 # ----------------------------------
-# Load env (.env in project folder)
+# Load env
 # ----------------------------------
 load_dotenv(find_dotenv(), override=False)
 
@@ -33,11 +46,10 @@ def require_api_key(x_api_key: str = Header(default="")):
 # ----------------------------------
 app = FastAPI(
     title="Playlist Builder – NLP Agent API",
-    version="1.0.0",
-    description="Simple NLP helper service used by the Streamlit UI."
+    version="1.1.0",
+    description="NLP helpers: mood/genre + fused mood endpoint for multi-signal inputs."
 )
 
-# Allow local Streamlit & optional custom origins from env
 _default_origins: List[str] = [
     "http://localhost:8501", "http://127.0.0.1:8501",
     "http://localhost", "http://127.0.0.1"
@@ -76,12 +88,30 @@ class AnalyzeResponse(BaseModel):
     genre: Optional[str] = None
     genre_confidence: Optional[float] = None
 
+class FuseInput(BaseModel):
+    # primary text + optional side-signals
+    text: Optional[str] = ""
+    color: Optional[str] = None
+    emoji: Optional[str] = None
+    # SAM (Self-Assessment Manikin) style inputs: valence/arousal in [-1..1] or [0..1]
+    valence: Optional[float] = None
+    arousal: Optional[float] = None
+    # quiz: arbitrary dict like {"q1":"A", "q2":3, ...}
+    quiz: Optional[Dict[str, Any]] = None
+
+class FuseResponse(BaseModel):
+    mood: str
+    confidence: float
+    parts: Dict[str, Any]  # per-signal scores/contributions
+
 # ----------------------------------
+# Routers
+# ----------------------------------
+if mood_router:
+    # protect your existing mood routes (including any /mood/fuse already defined there)
+    app.include_router(mood_router, dependencies=[Depends(require_api_key)])
+
 # Utility routes
-# ----------------------------------
-
-app.include_router(mood_router)
-
 @app.get("/")
 def root():
     return {"service": "playlist-nlp-agent", "status": "ok"}
@@ -91,22 +121,26 @@ def health():
     return {"ok": True}
 
 # ----------------------------------
-# Endpoints
+# Model status
 # ----------------------------------
+router = APIRouter()
 
 @router.get("/mood/model_status")
 def mood_model_status():
     loaded = _MODEL is not None
-    labels = _MODEL.get("labels") if loaded else []
+    labels = _MODEL.get("labels") if loaded and isinstance(_MODEL, dict) else []
     return {
-        "loaded": loaded,
-        "path": MODEL_PATH,
+        "loaded": bool(loaded),
+        "path": str(MODEL_PATH),
         "labels": labels,
         "type": "tfidf+logreg" if loaded else "lexicon"
     }
 
 app.include_router(router)
 
+# ----------------------------------
+# Baseline endpoints
+# ----------------------------------
 @app.post("/mood", response_model=MoodResponse, dependencies=[Depends(require_api_key)])
 def api_mood(inp: TextInput):
     txt = (inp.text or "").strip()
@@ -116,6 +150,9 @@ def api_mood(inp: TextInput):
     if isinstance(m_raw, (list, tuple)):
         mood  = str(m_raw[0]) if len(m_raw) > 0 else "unknown"
         m_conf = float(m_raw[1]) if len(m_raw) > 1 else 0.5
+    elif isinstance(m_raw, dict):
+        mood  = str(m_raw.get("label", "unknown"))
+        m_conf = float(m_raw.get("confidence", 0.5))
     else:
         mood, m_conf = str(m_raw), 0.5
     return MoodResponse(mood=mood, confidence=m_conf)
@@ -125,8 +162,16 @@ def api_genre(inp: TextInput):
     txt = (inp.text or "").strip()
     if not txt or len(txt) > 800:
         raise HTTPException(status_code=400, detail="Text must be 1..800 characters.")
-    genre, conf = classify_genre(txt)
-    return GenreResponse(genre=genre, confidence=float(conf))
+    g_raw = classify_genre(txt)
+    if isinstance(g_raw, (list, tuple)):
+        genre = str(g_raw[0]) if len(g_raw) > 0 else "unknown"
+        g_conf = float(g_raw[1]) if len(g_raw) > 1 else 0.5
+    elif isinstance(g_raw, dict):
+        genre = str(g_raw.get("label", "unknown"))
+        g_conf = float(g_raw.get("confidence", 0.5))
+    else:
+        genre, g_conf = str(g_raw), 0.5
+    return GenreResponse(genre=genre, confidence=g_conf)
 
 @app.post("/analyze", response_model=AnalyzeResponse, dependencies=[Depends(require_api_key)])
 def api_analyze(inp: TextInput):
@@ -134,19 +179,25 @@ def api_analyze(inp: TextInput):
     if not txt or len(txt) > 800:
         raise HTTPException(status_code=400, detail="Text must be 1..800 characters.")
 
-    # --- mood: accept tuple/list or str ---
+    # mood
     m_raw = detect_mood_agent(txt)
     if isinstance(m_raw, (list, tuple)):
         mood = str(m_raw[0]) if len(m_raw) > 0 else "unknown"
         m_conf = float(m_raw[1]) if len(m_raw) > 1 else 0.5
+    elif isinstance(m_raw, dict):
+        mood = str(m_raw.get("label", "unknown"))
+        m_conf = float(m_raw.get("confidence", 0.5))
     else:
         mood, m_conf = str(m_raw), 0.5
 
-    # --- genre: accept tuple/list or str ---
+    # genre
     g_raw = classify_genre(txt)
     if isinstance(g_raw, (list, tuple)):
         genre = str(g_raw[0]) if len(g_raw) > 0 else "unknown"
         g_conf = float(g_raw[1]) if len(g_raw) > 1 else 0.5
+    elif isinstance(g_raw, dict):
+        genre = str(g_raw.get("label", "unknown"))
+        g_conf = float(g_raw.get("confidence", 0.5))
     else:
         genre, g_conf = str(g_raw), 0.5
 
@@ -154,3 +205,91 @@ def api_analyze(inp: TextInput):
         mood=mood, mood_confidence=m_conf,
         genre=genre, genre_confidence=g_conf
     )
+
+# ----------------------------------
+# FUSED MOOD: /mood/fuse (text + optional signals)
+# ----------------------------------
+@app.post("/mood/fuse", response_model=FuseResponse, dependencies=[Depends(require_api_key)])
+def api_mood_fuse(inp: FuseInput):
+    """
+    Accepts text plus optional {color, emoji, valence, arousal, quiz} and returns a fused mood.
+    Uses app.mood_fusion + app.mood_signals if available; otherwise falls back to text-only mood.
+    """
+    if (inp.text is None or not str(inp.text).strip()) and not any([inp.color, inp.emoji, inp.valence, inp.arousal, inp.quiz]):
+        raise HTTPException(status_code=400, detail="Provide at least text or one side-signal (color/emoji/SAM/quiz).")
+
+    # 1) TEXT signal (always try)
+    text_label, text_conf, text_scores = "unknown", 0.5, {}
+    if inp.text:
+        m_raw = detect_mood_agent(str(inp.text).strip())
+        if isinstance(m_raw, (list, tuple)):
+            text_label = str(m_raw[0]) if len(m_raw) > 0 else "unknown"
+            text_conf  = float(m_raw[1]) if len(m_raw) > 1 else 0.5
+            # If scores provided as 3rd tuple item
+            if len(m_raw) > 2 and isinstance(m_raw[2], dict):
+                text_scores = m_raw[2]
+        elif isinstance(m_raw, dict):
+            text_label = str(m_raw.get("label", "unknown"))
+            text_conf  = float(m_raw.get("confidence", 0.5))
+            text_scores = dict(m_raw.get("scores", {}))
+        else:
+            text_label, text_conf = str(m_raw), 0.5
+
+    # 2) SIDE SIGNALS (robust to missing helpers)
+    color_scores = emoji_scores = sam_scores = quiz_scores = {}
+    if _HAS_FUSION:
+        if inp.color:
+            try:
+                color_scores = color_signal(inp.color)
+            except Exception:
+                color_scores = {}
+        if inp.emoji:
+            try:
+                emoji_scores = emoji_signal(inp.emoji)
+            except Exception:
+                emoji_scores = {}
+        if inp.valence is not None and inp.arousal is not None:
+            try:
+                sam_scores = sam_to_mood(float(inp.valence), float(inp.arousal))
+            except Exception:
+                sam_scores = {}
+        if inp.quiz:
+            try:
+                quiz_scores = quiz_signal(dict(inp.quiz))
+            except Exception:
+                quiz_scores = {}
+
+    # 3) FUSE (if helpers exist); else fallback to text
+    if _HAS_FUSION:
+        try:
+            fused = fuse_mood_helper(
+                text_scores=text_scores or {text_label: text_conf},
+                color_scores=color_scores,
+                emoji_scores=emoji_scores,
+                sam_scores=sam_scores,
+                quiz_scores=quiz_scores,
+            )
+            # expected return: (label, confidence, parts) or dict
+            if isinstance(fused, (list, tuple)) and len(fused) >= 2:
+                final_label = str(fused[0])
+                final_conf  = float(fused[1])
+                parts = fused[2] if len(fused) > 2 and isinstance(fused[2], dict) else {
+                    "text": text_scores, "color": color_scores, "emoji": emoji_scores, "sam": sam_scores, "quiz": quiz_scores
+                }
+            elif isinstance(fused, dict):
+                final_label = str(fused.get("label", text_label))
+                final_conf  = float(fused.get("confidence", text_conf))
+                parts = dict(fused.get("parts", {
+                    "text": text_scores, "color": color_scores, "emoji": emoji_scores, "sam": sam_scores, "quiz": quiz_scores
+                }))
+            else:
+                final_label, final_conf = text_label, text_conf
+                parts = {"text": text_scores}
+        except Exception:
+            final_label, final_conf = text_label, text_conf
+            parts = {"text": text_scores}
+    else:
+        final_label, final_conf = text_label, text_conf
+        parts = {"text": text_scores}
+
+    return FuseResponse(mood=final_label, confidence=final_conf, parts=parts)

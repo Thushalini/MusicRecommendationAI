@@ -38,7 +38,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="C:\Users\User\OneDrive\Documents\Github\New folder\MusicRecommendationAI\PlayList_Builder\venv"
+VIRTUAL_ENV="C:\Users\User\OneDrive\Desktop\MusicRecommendationAI\PlayList_Builder\venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
