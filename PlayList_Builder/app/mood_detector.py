@@ -14,7 +14,7 @@ if not log.handlers:
 # -------------------------------------------------
 # Model location (override with MOOD_MODEL_PATH)
 # -------------------------------------------------
-MODEL_PATH = Path(os.getenv("MOOD_MODEL_PATH", "models/mood_tfidf.joblib")).resolve()
+MODEL_PATH = Path(os.getenv("MOOD_MODEL_PATH", "app/models/mood_tfidf.joblib")).resolve()
 
 # -------------------------------------------------
 # Optional deps (we avoid loading if sklearn missing)
