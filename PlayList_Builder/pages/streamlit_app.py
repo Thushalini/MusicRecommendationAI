@@ -9,8 +9,10 @@ from dotenv import load_dotenv
 from typing import Any, Dict, List, Optional, Tuple
 
 from app.spotify import generate_playlist_from_user_settings
-from app.llm_helper import generate_playlist_description  
+from app.llm_helper import generate_playlist_description
 from app.datastore import save_playlist, list_playlists, load_playlist, delete_playlist
+from app.mood_detector import detect_mood as detect_mood_agent
+from app.genre_classifier import classify_genre as classify_genre_agent
 
 # -----------------------------
 # Env / config
@@ -121,6 +123,7 @@ def call_analyzer(text: str) -> Optional[dict]:
     if not (text or "").strip():
         return None
     try:
+        # Use the /analyze endpoint which now returns both mood and genre
         r = requests.post(
             f"{API_BASE}/analyze",
             json={"text": text},
