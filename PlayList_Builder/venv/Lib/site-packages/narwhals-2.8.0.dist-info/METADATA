@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: narwhals
-Version: 2.7.0
+Version: 2.8.0
 Summary: Extremely lightweight compatibility layer between dataframe libraries
 Project-URL: Homepage, https://github.com/narwhals-dev/narwhals
 Project-URL: Documentation, https://narwhals-dev.github.io/narwhals/
@@ -19,7 +19,7 @@ Requires-Dist: cudf>=24.10.0; extra == 'cudf'
 Provides-Extra: dask
 Requires-Dist: dask[dataframe]>=2024.8; extra == 'dask'
 Provides-Extra: duckdb
-Requires-Dist: duckdb>=1.0; extra == 'duckdb'
+Requires-Dist: duckdb>=1.1; extra == 'duckdb'
 Provides-Extra: ibis
 Requires-Dist: ibis-framework>=6.0.0; extra == 'ibis'
 Requires-Dist: packaging; extra == 'ibis'
