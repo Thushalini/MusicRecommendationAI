@@ -10,7 +10,7 @@ from dotenv import load_dotenv, find_dotenv
 from app.mood_detector import detect_mood as detect_mood_agent
 from app.genre_classifier import classify_genre as classify_genre_agent
 from app.mood_detector import MODEL_PATH, _PIPELINE as _MOOD_MODEL
-from app.genre_classifier import MODEL_PATH as GENRE_MODEL_PATH
+from app.genre_classifier import MODEL_PATH as GENRE_MODEL_PATH, _PIPELINE as _GENRE_MODEL
 
 # --- Only import RG quiz helper (no other side-signals) -----------------------
 try:
@@ -135,16 +135,13 @@ def mood_model_status():
 
 @router.get("/genre/model_status")
 def genre_model_status():
-    # The genre classifier uses an in-memory index, not a _PIPELINE object.
-    # We can check if the index is built by checking _ALL_GENRES from genre_classifier.
-    from app.genre_classifier import _ALL_GENRES
-    loaded = bool(_ALL_GENRES)
-    labels = _ALL_GENRES
+    loaded = _GENRE_MODEL is not None
+    labels = _GENRE_MODEL.get("genre_classes") if loaded and isinstance(_GENRE_MODEL, dict) else []
     return {
-        "loaded": loaded,
+        "loaded": bool(loaded),
         "path": str(GENRE_MODEL_PATH),
         "labels": labels,
-        "type": "keyword_matching"
+        "type": "tfidf+logreg" if loaded else "lexicon" # Assuming lexicon fallback for genre if model fails
     }
 
 app.include_router(router)
