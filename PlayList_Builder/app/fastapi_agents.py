@@ -8,8 +8,9 @@ from pydantic import BaseModel
 from dotenv import load_dotenv, find_dotenv
 
 from app.mood_detector import detect_mood as detect_mood_agent
-from app.llm_helper import classify_genre
-from app.mood_detector import MODEL_PATH, _PIPELINE as _MODEL
+from app.genre_classifier import classify_genre as classify_genre_agent
+from app.mood_detector import MODEL_PATH, _PIPELINE as _MOOD_MODEL
+from app.genre_classifier import MODEL_PATH as GENRE_MODEL_PATH, _PIPELINE as _GENRE_MODEL
 
 # OPTIONAL fusion helpers (color/emoji/SAM/quiz). Keep try/except to avoid crashes if files are missing.
 try:
@@ -128,13 +129,24 @@ router = APIRouter()
 
 @router.get("/mood/model_status")
 def mood_model_status():
-    loaded = _MODEL is not None
-    labels = _MODEL.get("labels") if loaded and isinstance(_MODEL, dict) else []
+    loaded = _MOOD_MODEL is not None
+    labels = _MOOD_MODEL.get("labels") if loaded and isinstance(_MOOD_MODEL, dict) else []
     return {
         "loaded": bool(loaded),
         "path": str(MODEL_PATH),
         "labels": labels,
         "type": "tfidf+logreg" if loaded else "lexicon"
+    }
+
+@router.get("/genre/model_status")
+def genre_model_status():
+    loaded = _GENRE_MODEL is not None
+    labels = _GENRE_MODEL.get("genre_classes") if loaded and isinstance(_GENRE_MODEL, dict) else []
+    return {
+        "loaded": bool(loaded),
+        "path": str(GENRE_MODEL_PATH),
+        "labels": labels,
+        "type": "tfidf+logreg" if loaded else "lexicon" # Assuming lexicon fallback for genre if model fails
     }
 
 app.include_router(router)
@@ -163,7 +175,12 @@ def api_genre(inp: TextInput):
     txt = (inp.text or "").strip()
     if not txt or len(txt) > 800:
         raise HTTPException(status_code=400, detail="Text must be 1..800 characters.")
-    g_raw = classify_genre(txt)
+    
+    # First detect mood to pass to genre classifier
+    m_raw = detect_mood_agent(txt)
+    detected_mood = str(m_raw[0]) if isinstance(m_raw, (list, tuple)) and len(m_raw) > 0 else "unknown"
+
+    g_raw = classify_genre_agent(txt, detected_mood)
     if isinstance(g_raw, (list, tuple)):
         genre = str(g_raw[0]) if len(g_raw) > 0 else "unknown"
         g_conf = float(g_raw[1]) if len(g_raw) > 1 else 0.5
@@ -185,14 +202,17 @@ def api_analyze(inp: TextInput):
     if isinstance(m_raw, (list, tuple)):
         mood = str(m_raw[0]) if len(m_raw) > 0 else "unknown"
         m_conf = float(m_raw[1]) if len(m_raw) > 1 else 0.5
+        detected_mood = mood # Store detected mood for genre classification
     elif isinstance(m_raw, dict):
         mood = str(m_raw.get("label", "unknown"))
         m_conf = float(m_raw.get("confidence", 0.5))
+        detected_mood = mood
     else:
         mood, m_conf = str(m_raw), 0.5
+        detected_mood = mood
 
     # genre
-    g_raw = classify_genre(txt)
+    g_raw = classify_genre_agent(txt, detected_mood) # Pass detected mood
     if isinstance(g_raw, (list, tuple)):
         genre = str(g_raw[0]) if len(g_raw) > 0 else "unknown"
         g_conf = float(g_raw[1]) if len(g_raw) > 1 else 0.5
