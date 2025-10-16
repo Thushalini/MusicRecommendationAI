@@ -1,0 +1,20 @@
+{
+  "users": {
+    "itz.nithmi@gmail.com": {
+      "email": "itz.nithmi@gmail.com",
+      "display_name": "Nithmi",
+      "salt": "7e0efa0a924f1eec4a8f56f0acf4b3f9",
+      "pwd": "959958316aecca941ff3374ca94cc28970cf8217132193ab48dfd7d7184e6223",
+      "avatar_url": null,
+      "created_at": 1760599111
+    },
+    "lolly.shuijing@gmail.com": {
+      "email": "lolly.shuijing@gmail.com",
+      "display_name": "Emma",
+      "salt": "0388248a6599237ac725a52086b67c9f",
+      "pwd": "2cdfc9d1143b26ae6e41fcb4b1a00541f95f0d63ecccea7e33b56b9fbeb27f72",
+      "avatar_url": null,
+      "created_at": 1760605103
+    }
+  }
+}

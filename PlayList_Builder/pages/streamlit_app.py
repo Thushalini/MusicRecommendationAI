@@ -1,16 +1,20 @@
+# streamlit_app.py
 # Modern UI + Persistent generated playlist + Save/Load to .appdata/saved_playlists.json
-# (no score filtering; save uses session_state so UI doesn't vanish on click)
+# Replaced Spotify OAuth with local Streamlit login/signup (app/auth_local.py)
 
-import os
-import json
-import requests
-import streamlit as st
+import os, sys, json, requests, streamlit as st
 from dotenv import load_dotenv
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from app.spotify import generate_playlist_from_user_settings
-from app.llm_helper import generate_playlist_description  
-from app.datastore import save_playlist, list_playlists, load_playlist, delete_playlist
+# --- make project root importable (so 'app' package resolves) ---
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+
+from app.spotify import generate_playlist_from_user_settings           # UNCHANGED
+from app.llm_helper import generate_playlist_description              # UNCHANGED
+from app.datastore import save_playlist, list_playlists, load_playlist, delete_playlist  # UNCHANGED
+from app.auth import create_user, authenticate, get_profile      # NEW local auth
 
 # -----------------------------
 # Env / config
@@ -20,32 +24,21 @@ load_dotenv(dotenv_path, override=False)
 
 API_BASE = os.getenv("AGENTS_API_BASE", "http://127.0.0.1:8000")
 API_KEY  = os.getenv("AGENTS_API_KEY",  "dev-key-change-me")
+def _h(): return {"x-api-key": API_KEY}
 
 # -----------------------------
 # Page config
 # -----------------------------
 st.set_page_config(
     page_title="Music Recommendation AI",
-    page_icon=None,
+    page_icon="🎵",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # -----------------------------
-# Styles
+# Styles (UNCHANGED)
 # -----------------------------
-# st.markdown("""
-# <style>
-# /* Hide only unwanted page links in the sidebar nav */
-# div[data-testid="stSidebarNav"] li a[href*="Main"] {display: none !important;}
-# div[data-testid="stSidebarNav"] li a[href*="streamlit_app"] {display: none !important;}
-
-# /* Optional: adjust top padding for a cleaner look */
-# section[data-testid="stSidebar"] > div:first-child {padding-top: 0 !important;}
-# </style>
-# """, unsafe_allow_html=True)
-
-
 st.markdown(
     """
 <style>
@@ -69,7 +62,7 @@ section[data-testid="stSidebar"] .stMarkdown, section[data-testid="stSidebar"] p
   background: rgba(255,255,255,.04)!important; color:var(--text)!important; border:var(--border)!important; border-radius:12px!important;
 }
 
-/* Default buttons (all buttons outside sidebar stay the same) */
+/* Default buttons */
 .stButton button{
   background:var(--primary)!important; color:#000000!important; font-weight:700!important; border-radius:12px!important;
   padding:10px 16px!important; border:none!important; transition:transform .08s ease, box-shadow .08s ease;
@@ -79,8 +72,8 @@ section[data-testid="stSidebar"] .stMarkdown, section[data-testid="stSidebar"] p
 
 /* ONLY the Generate Playlist button in the sidebar */
 section[data-testid="stSidebar"] div.stButton > button{
-  color:#000000 !important;              /* black text */
-  -webkit-text-fill-color:#000000 !important; /* force on WebKit */
+  color:#000000 !important;
+  -webkit-text-fill-color:#000000 !important;
   text-shadow:none !important;
   font-weight:800 !important;
   font-size:16px !important;
@@ -99,6 +92,12 @@ section[data-testid="stSidebar"] div.stButton > button{
 .track iframe{ width:100%; height:152px; border:0; }
 .meta{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.55rem; }
 .footer{ color:var(--muted); font-size:13px; text-align:center; padding:16px 0 6px; opacity:.9; }
+
+/* profile pill */
+.profile-card{ display:flex; align-items:center; gap:.6rem; padding:.5rem .6rem; border-radius:999px; border:var(--border); background:linear-gradient(180deg,#141821,#0f1115); }
+.profile-card img{ width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid rgba(255,255,255,.15); }
+.profile-card .name{ font-weight:700; color:var(--text); }
+.profile-card .meta{ font-size:.8rem; color:var(--muted); margin-top:-2px; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -113,53 +112,134 @@ if "gen_data" not in st.session_state:
     st.session_state.gen_data = None
 if "selected_saved_id" not in st.session_state:
     st.session_state.selected_saved_id = None
+if "user" not in st.session_state:
+    st.session_state.user = None  # {"email","display_name","avatar_url"}
+if "bootstrapped" not in st.session_state:
+    st.session_state.bootstrapped = True  # no server sync now
 
 # -----------------------------
-# Helpers
+# Local Auth UI (NEW)
 # -----------------------------
-def call_analyzer(text: str) -> Optional[dict]:
-    if not (text or "").strip():
-        return None
-    try:
-        r = requests.post(
-            f"{API_BASE}/analyze",
-            json={"text": text},
-            headers={"x-api-key": API_KEY},
-            timeout=10,
-        )
-        return r.json() if r.ok else None
-    except Exception:
-        return None
+def _login_ui():
+    tabs = st.tabs(["Login", "Sign up"])
+    with tabs[0]:
+        st.subheader("Login")
+        email = st.text_input("Email", key="login_email")
+        pw    = st.text_input("Password", type="password", key="login_pw")
+        if st.button("Login", use_container_width=True, key="btn_login"):
+            user = authenticate(email, pw)
+            if user:
+                st.session_state.user = user
+                st.success(f"Welcome back, {user['display_name']}!")
+                st.rerun()
+            else:
+                st.error("Invalid credentials.")
+    with tabs[1]:
+        st.subheader("Create account")
+        se = st.text_input("Email", key="signup_email")
+        sn = st.text_input("Display name", key="signup_name")
+        sp = st.text_input("Password (min 6 chars)", type="password", key="signup_pw")
+        if st.button("Create account", use_container_width=True, key="btn_signup"):
+            try:
+                user = create_user(se, sn, sp)
+                st.success("Account created. You can log in now.")
+            except Exception as e:
+                st.error(str(e))
 
-def render_tracks(items: List[Dict[str, Any]]):
-    st.markdown('<div class="grid">', unsafe_allow_html=True)
-    for item in items:
-        tr = item.get("track") or {}
-        tid = tr.get("id")
-        if not tid:
-            continue
-        artists = ", ".join(a.get("name", "") for a in tr.get("artists", []))
-        score = item.get("score")
-        score_txt = "—" if score is None else f"{score:.2f}"
-        reason = item.get("reason") or ""
-        title = f"{tr.get('name','Unknown')} — {artists}"
-        embed = f"https://open.spotify.com/embed/track/{tid}?utm_source=generator"
-        st.markdown(
-            f"""
-<div class="card">
-  <div class="track"><iframe src="{embed}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div>
-  <div class="card__body">
-    <div class="card__title">{title}</div>
-    <div class="meta">
-      <span class="badge">score: {score_txt}</span>
-      {"<span class='badge'>"+reason+"</span>" if reason else ""}
-    </div>
+# -----------------------------
+# Sidebar (TOP: profile card • then controls)
+# -----------------------------
+with st.sidebar:
+    u = st.session_state.user
+    if not u:
+        st.markdown("#### Sign in")
+        _login_ui()
+        st.markdown("---")
+        st.stop()
+
+    # Profile pill
+    avatar = u.get("avatar_url") or "https://avatars.githubusercontent.com/u/1?v=4"
+    name = u.get("display_name") or u.get("email")
+    sid = u.get("email")
+    st.markdown(
+        f"""
+<div class="profile-card">
+  <img src="{avatar}" alt="avatar" />
+  <div>
+    <div class="name">{name}</div>
+    <div class="meta">{sid}</div>
   </div>
 </div>
 """,
-            unsafe_allow_html=True,
-        )
-    st.markdown("</div>", unsafe_allow_html=True)
+        unsafe_allow_html=True,
+    )
+    col_logout, _ = st.columns([1,3])
+    with col_logout:
+        if st.button("Log out"):
+            st.session_state.user = None
+            st.rerun()
+
+    st.divider()
+    st.subheader("Playlist Settings")
+
+    # --- Vibe text ---
+    vibe_description = st.text_area(
+        "Describe your vibe",
+        value=st.session_state.get("vibe_prefill", ""),
+        placeholder='e.g., "rainy bus ride, calm focus, minimal vocals"',
+        height=110,
+    )
+
+    # --- Read fused mood from session or query (?mood=) (kept behavior)
+    def _read_fused_mood_label() -> Optional[str]:
+        lbl = st.session_state.get("fused_mood_label")
+        if isinstance(lbl, str) and lbl.strip():
+            return lbl.strip()
+        val = st.query_params.get("mood", None)
+        s = (val or "").strip() if isinstance(val, str) else None
+        return s or None
+
+    fused_label = _read_fused_mood_label()
+    fused_conf  = st.session_state.get("fused_mood_conf")
+
+    # --- Mood source + value ---
+    mood_options = ["happy","sad","energetic","chill","focus","romantic","angry","calm"]
+    use_quiz = st.radio(
+        "Use mood from",
+        ["Quiz (recommended)", "Manual"],
+        index=0 if fused_label else 1,
+        horizontal=True,
+        key="mood_source_radio",
+    )
+
+    if use_quiz == "Quiz (recommended)":
+        effective_mood = fused_label or "chill"
+        if fused_label:
+            st.caption(f'From quiz: **{fused_label}**' + (f" (conf {fused_conf})" if fused_conf is not None else ""))
+        if st.button("🧩 Take / retake quiz"):
+            st.switch_page("pages/mood_ui.py")
+        st.page_link("pages/mood_ui.py", label="Open mood quiz page")
+    else:
+        manual_index = mood_options.index(fused_label) if fused_label in mood_options else 3
+        manual_mood = st.selectbox("Select mood", mood_options, index=manual_index, key="manual_mood_select")
+        effective_mood = manual_mood
+
+    st.session_state["effective_mood"] = effective_mood
+
+    activity = st.selectbox(
+        "Activity",
+        ["workout", "study", "party", "relax", "commute", "sleep", "none"],
+        index=1,
+    )
+    genre_or_language = st.text_input("Genre", placeholder="hip hop, r&b, lofi")
+    prefer_auto = st.toggle("Prefer auto-detected genre if available", value=True)
+    exclude_explicit = st.toggle("Exclude explicit lyrics", value=False)
+    limit = st.slider("Tracks per playlist", 5, 20, 12)
+
+    with st.expander("Advanced"):
+        show_debug = st.checkbox("Show analyzer debug", value=False)
+
+    go = st.button("Generate Playlist", use_container_width=True, key="btn_generate")
 
 # -----------------------------
 # Header / Quick start
@@ -204,90 +284,51 @@ with c2:
             st.session_state["vibe_prefill"] = "focus work, instrumental, deep concentration, electronic minimal"
 
 # -----------------------------
-# Sidebar (controls)
+# Helpers
 # -----------------------------
-with st.sidebar:
-    st.subheader("Playlist Settings")
+def call_analyzer(text: str) -> Optional[dict]:
+    if not (text or "").strip():
+        return None
+    try:
+        r = requests.post(f"{API_BASE}/analyze", json={"text": text}, headers=_h(), timeout=10)
+        return r.json() if r.ok else None
+    except Exception:
+        return None
 
-    # --- Vibe text ---
-    vibe_description = st.text_area(
-        "Describe your vibe",
-        value=st.session_state.get("vibe_prefill", ""),
-        placeholder='e.g., "rainy bus ride, calm focus, minimal vocals"',
-        height=110,
-    )
-
-    # --- Read fused mood from session (preferred) or ?mood= fallback ---
-    def _read_fused_mood_label() -> str | None:
-        lbl = st.session_state.get("fused_mood_label")
-        if lbl:
-            return str(lbl).strip()
-        # fallback: query param ?mood=happy
-        try:
-            qp = getattr(st, "query_params", None)
-            qp = qp if qp is not None else st.experimental_get_query_params()
-            if isinstance(qp.get("mood"), list):
-                return (qp.get("mood", [None])[0] or "").strip() or None
-            return (qp.get("mood") or "").strip() or None
-        except Exception:
-            return None
-
-    fused_label = _read_fused_mood_label()
-    fused_conf  = st.session_state.get("fused_mood_conf")
-
-    # --- Mood source + value ---
-    mood_options = ["happy","sad","energetic","chill","focus","romantic","angry","calm"]
-    use_quiz = st.radio(
-        "Use mood from",
-        ["Quiz (recommended)", "Manual"],
-        index=0 if fused_label else 1,
-        horizontal=True,
-        key="mood_source_radio",
-    )
-
-    if use_quiz == "Quiz (recommended)":
-        effective_mood = fused_label or "chill"
-        # Show last fused mood (and confidence if present)
-        if fused_label:
-            st.caption(
-                f'From quiz: **{fused_label}**'
-                + (f" (conf {fused_conf})" if fused_conf is not None else "")
-            )
-
-        if st.button("🧩 Take / retake quiz"):
-            st.switch_page("pages/mood_ui.py")  # or "mood_ui.py" if the file is at root
-
-        # Optional: also show a link (opens in same tab)
-        st.page_link("pages/mood_ui.py", label="Open mood quiz page")
-    else:
-        # Manual override
-        manual_index = mood_options.index(fused_label) if fused_label in mood_options else 3
-        manual_mood = st.selectbox("Select mood", mood_options, index=manual_index, key="manual_mood_select")
-        effective_mood = manual_mood
-
-    # Persist the chosen mood for the builder
-    st.session_state["effective_mood"] = effective_mood
-
-    # --- Activity / other settings ---
-    activity = st.selectbox(
-        "Activity",
-        ["workout", "study", "party", "relax", "commute", "sleep", "none"],
-        index=1,
-    )
-    genre_or_language = st.text_input("Genre", placeholder="hip hop, r&b, lofi")
-    prefer_auto = st.toggle("Prefer auto-detected genre if available", value=True)
-    exclude_explicit = st.toggle("Exclude explicit lyrics", value=False)
-    limit = st.slider("Tracks per playlist", 5, 20, 12)
-
-    with st.expander("Advanced"):
-        show_debug = st.checkbox("Show analyzer debug", value=False)
-
-    go = st.button("Generate Playlist", use_container_width=True, key="btn_generate")
+def render_tracks(items: List[Dict[str, Any]]):
+    st.markdown('<div class="grid">', unsafe_allow_html=True)
+    for item in items:
+        tr = item.get("track") or {}
+        tid = tr.get("id")
+        if not tid:
+            continue
+        artists = ", ".join(a.get("name", "") for a in tr.get("artists", []))
+        score = item.get("score")
+        score_txt = "—" if score is None else f"{score:.2f}"
+        reason = item.get("reason") or ""
+        title = f"{tr.get('name','Unknown')} — {artists}"
+        embed = f"https://open.spotify.com/embed/track/{tid}?utm_source=generator"
+        st.markdown(
+            f"""
+<div class="card">
+  <div class="track"><iframe src="{embed}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div>
+  <div class="card__body">
+    <div class="card__title">{title}</div>
+    <div class="meta">
+      <span class="badge">score: {score_txt}</span>
+      {"<span class='badge'>"+reason+"</span>" if reason else ""}
+    </div>
+  </div>
+</div>
+""",
+            unsafe_allow_html=True,
+        )
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # -----------------------------
 # Tabs
 # -----------------------------
-tab_build, tab_saved, tab_about = st.tabs(["Builder", "Saved", "How it works"])
+tab_build, tab_saved, tab_about, tab_for_you = st.tabs(["Builder", "Saved", "How it works","For You"])
 
 # =============================
 # Builder
@@ -298,7 +339,6 @@ with tab_build:
             st.warning("Please enter a short vibe description.")
             st.stop()
 
-        # --- modern, minimal progress UI (emoji-free) ---
         class _DummyStatus:
             def __enter__(self): return self
             def __exit__(self, *a): pass
@@ -316,35 +356,30 @@ with tab_build:
                 return _spin()
 
         with mk_status("Crafting your playlist") as s:
-            # Step 1: analyze
             s.write("Step 1 • Analyzing your preferences (mood/genre hints)")
-            analysis = call_analyzer(vibe_description)
+            analysis = call_analyzer(str(vibe_description or ""))
             auto_mood = (analysis or {}).get("mood")
             auto_genre = (analysis or {}).get("genre")
 
-            selected = st.session_state.get("effective_mood")  # from sidebar radio/select
+            selected = st.session_state.get("effective_mood")
             mood_final = None if (not selected or selected == "Auto-detect") else selected
             if mood_final is None:
-                # fallbacks: analyzer → fused label from sidebar → default
                 mood_final = auto_mood or st.session_state.get("fused_mood_label") or "chill"
 
             genre_final = (genre_or_language or "").strip()
             if prefer_auto and not genre_final:
                 genre_final = (auto_genre or "").strip()
 
-            if show_debug:
-                st.code(json.dumps(
-                    {"analysis": analysis, "mood_final": mood_final, "genre_final": genre_final},
-                    indent=2
-                ), language="json")
+            if st.session_state.get("show_debug", False) or True:  # keep same switch behavior
+                if show_debug:
+                    st.code(json.dumps({"analysis": analysis, "mood_final": mood_final, "genre_final": genre_final}, indent=2), language="json")
 
-            # Step 2: fetch & score tracks
             s.update(label="Crafting your playlist • Retrieving candidates and scoring")
             s.write("Step 2 • Pulling tracks from Spotify and ranking for relevance")
             try:
-                st.session_state.used_track_ids = set()
+                st.session_state.used_track_ids = {str(x) for x in (st.session_state.used_track_ids or set()) if x}
                 playlist_items, st.session_state.used_track_ids = generate_playlist_from_user_settings(
-                    vibe_description=vibe_description,
+                    vibe_description=str(vibe_description or ""),
                     mood=mood_final,
                     activity=("" if activity == "none" else activity),
                     genre_or_language=genre_final,
@@ -361,7 +396,6 @@ with tab_build:
                 st.info("No tracks found. Try broadening genre/language or disabling the explicit filter.")
                 st.stop()
 
-            # Step 3: description
             s.update(label="Crafting your playlist • Generating summary")
             s.write("Step 3 • Composing a short description of the vibe and flow")
             desc = ""
@@ -379,7 +413,6 @@ with tab_build:
             except Exception:
                 pass
 
-            # Persist for render
             st.session_state.gen_data = {
                 "items": playlist_items,
                 "desc": desc,
@@ -391,7 +424,6 @@ with tab_build:
                 "limit": limit,
             }
 
-            # Finalize visual
             try:
                 s.update(label="Playlist ready", state="complete", expanded=False)
             except Exception:
@@ -399,14 +431,11 @@ with tab_build:
 
         st.toast("Playlist generated.")
 
-    # ---- single empty-state hint & render block (no duplicates) ----
     gd = st.session_state.get("gen_data")
     empty_hint = st.empty()
 
     if gd:
         empty_hint.empty()
-
-        # badges
         st.markdown(
             f"""
 <div class="badges">
@@ -421,7 +450,6 @@ with tab_build:
         if gd.get("desc"):
             st.success(gd["desc"])
 
-        # --- SAVE UI AT TOP ---
         default_title = " · ".join([x for x in [gd["mood_final"], gd["activity_final"], gd["genre_final"]] if x]) or "My Playlist"
         if "save_title" not in st.session_state:
             st.session_state.save_title = default_title
@@ -436,7 +464,6 @@ with tab_build:
         )
 
         if col_s.button("Save", use_container_width=True, key="btn_save"):
-            # normalize for storage (flatten 'track' dict)
             norm_tracks: List[Dict[str, Any]] = []
             for it in gd["items"]:
                 tr = it.get("track") or {}
@@ -469,7 +496,6 @@ with tab_build:
             st.success(f"Saved (ID: {saved['id']})")
             st.session_state.selected_saved_id = saved["id"]
 
-        # --- TRACKS BELOW ---
         render_tracks(gd["items"])
 
     else:
@@ -484,11 +510,23 @@ with tab_saved:
     if not rows:
         st.info("No playlists saved yet.")
     else:
+        moods: List[str] = sorted({
+            str(m).strip()
+            for m in (r.get("mood") for r in rows)
+            if m is not None and str(m).strip() != ""
+        })
+        activities: List[str] = sorted({
+            str(a).strip()
+            for a in (r.get("activity") for r in rows)
+            if a is not None and str(a).strip() != ""
+        })
+
         fc1, fc2, fc3 = st.columns(3)
-        f_mood = fc1.selectbox("Filter mood", ["All"] + sorted({r.get("mood") for r in rows if r.get("mood")}), index=0)
-        f_activity = fc2.selectbox("Filter activity", ["All"] + sorted({r.get("activity") for r in rows if r.get("activity")}), index=0)
+        f_mood = fc1.selectbox("Filter mood", ["All"] + moods, index=0)
+        f_activity = fc2.selectbox("Filter activity", ["All"] + activities, index=0)
         f_genre = fc3.text_input("Filter genre contains", value="")
 
+        from typing import Callable
         def _keep(r: Dict[str, Any]) -> bool:
             if f_mood != "All" and r.get("mood") != f_mood:
                 return False
@@ -498,7 +536,8 @@ with tab_saved:
                 return False
             return True
 
-        view = [r for r in rows if _keep(r)]
+        _keep_fn: Callable[[Dict[str, Any]], bool] = _keep
+        view = [r for r in rows if _keep_fn(r)] #type: ignore
 
         for row in view:
             with st.container():
@@ -523,7 +562,6 @@ with tab_saved:
                     tracks = saved.get("tracks", [])
                     if desc:
                         st.success(desc)
-                    # reuse renderer for saved tracks (they're already flattened)
                     st.markdown('<div class="grid">', unsafe_allow_html=True)
                     for t in tracks:
                         tid = t.get("id")
@@ -559,6 +597,7 @@ with tab_about:
     st.markdown("### What this app does")
     st.markdown(
         """
+- Sign in with a simple local account (stored securely in `.appdata/users.json`).
 - Analyze your vibe via an NLP agent (`/analyze`) to infer mood and genre (optional).
 - Combine your choices with auto-detected suggestions.
 - Fetch & score tracks via `app.spotify.generate_playlist_from_user_settings(...)`.
@@ -566,6 +605,145 @@ with tab_about:
 - Embed tracks and save to `.appdata/saved_playlists.json`. Open/Delete from the Saved tab.
 """
     )
+
+
+
+# =============================
+# For You (NEW TAB)
+# =============================
+with tab_for_you:
+    st.subheader("For You • personalized picks")
+
+    # If your Spotify OAuth stores a token in session, we will use backend /spotify/for_you.
+    token = st.session_state.get("spotify_access_token")
+
+    # Fallback: lightweight profile from saved playlists (no external calls)
+    def _profile_from_saved(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+        from collections import Counter
+        artists = Counter()
+        genres = Counter()
+        tracks = Counter()
+        for r in rows:
+            for t in (r.get("tracks") or []):
+                for a in (t.get("artists") or []):
+                    artists[a] += 1
+                # if you store genres per track, they will be counted here (kept generic)
+                for g in (t.get("genres") or []):
+                    genres[str(g).lower()] += 1
+                if t.get("id"): tracks[t["id"]] += 1
+        return {
+            "top_artists": [a for a,_ in artists.most_common(5)],
+            "top_genres": [g for g,_ in genres.most_common(5)],
+            "top_tracks": [t for t,_ in tracks.most_common(5)],
+        }
+
+    cols = st.columns([1,1,1,1])
+    limit_for_you = cols[0].slider("How many", 8, 50, 24, 1, key="for_you_limit")
+    refresh_for_you = cols[1].button("Refresh", key="for_you_refresh")
+
+    # Try backend recommendations first (requires token). Else, show a smart fallback list.
+    if refresh_for_you or "for_you_cache" not in st.session_state:
+        if token:
+            try:
+                r = requests.get(
+                    f"{API_BASE}/spotify/for_you",
+                    headers={"x-api-key": API_KEY, "Authorization": f"Bearer {token}"},
+                    params={"limit": limit_for_you},
+                    timeout=25,
+                )
+                r.raise_for_status()
+                st.session_state["for_you_cache"] = r.json()
+            except Exception as e:
+                st.session_state["for_you_cache"] = {"error": str(e)}
+        else:
+            st.session_state["for_you_cache"] = {"note": "no_token"}
+
+    cache = st.session_state.get("for_you_cache", {})
+
+    if cache.get("error"):
+        st.error(f"Could not fetch recommendations: {cache['error']}")
+
+    if cache.get("recommendations"):
+        prof = cache.get("profile", {})
+        recs = cache.get("recommendations", [])
+
+        st.caption("Profile seeds learned from your saved playlists:")
+        st.write(
+            " • ".join([
+                f"Artists: {', '.join(prof.get('top_artist_ids', [])[:3]) or '—'}",
+                f"Genres: {', '.join(prof.get('top_genres', [])[:3]) or '—'}",
+                f"Tracks: {', '.join(prof.get('top_track_ids', [])[:3]) or '—'}",
+            ])
+        )
+
+        # Grid of simple recommendation cards
+        st.markdown('<div class="grid">', unsafe_allow_html=True)
+        for tr in recs[:limit_for_you]:
+            tid = tr.get("id")
+            if not tid:
+                continue
+            artists = ", ".join(tr.get("artists", []))
+            title = f"{tr.get('name','Unknown')} — {artists}"
+            embed = f"https://open.spotify.com/embed/track/{tid}?utm_source=generator"
+            st.markdown(
+                f"""
+<div class="card">
+  <div class="track"><iframe src="{embed}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div>
+  <div class="card__body">
+    <div class="card__title">{title}</div>
+  </div>
+</div>
+""",
+                unsafe_allow_html=True,
+            )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    elif cache.get("note") == "no_token":
+        # Fallback: show insights + resurfacing from saved playlists
+        rows = list_playlists()
+        if not rows:
+            st.info("No saved playlists yet. Save a few to unlock personalized recommendations.")
+        else:
+            prof = _profile_from_saved(rows)
+            st.caption("Learned from your saved playlists (local):")
+            st.write(
+                " • ".join([
+                    f"Top artists: {', '.join(prof['top_artists']) or '—'}",
+                    f"Top genres: {', '.join(prof['top_genres']) or '—'}",
+                ])
+            )
+            st.info("Connect Spotify in your backend to enable similar-track discovery. Showing some resurfaced favorites.")
+            # Resurface top tracks (unique) from saved playlists
+            shown = set()
+            st.markdown('<div class="grid">', unsafe_allow_html=True)
+            for r in rows:
+                for t in r.get("tracks", []):
+                    tid = t.get("id")
+                    if not tid or tid in shown:
+                        continue
+                    shown.add(tid)
+                    artists = ", ".join(t.get("artists", []))
+                    title = f"{t.get('name','Unknown')} — {artists}"
+                    embed = f"https://open.spotify.com/embed/track/{tid}?utm_source=generator"
+                    st.markdown(
+                        f"""
+<div class="card">
+  <div class="track"><iframe src="{embed}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div>
+  <div class="card__body">
+    <div class="card__title">{title}</div>
+  </div>
+</div>
+""",
+                        unsafe_allow_html=True,
+                    )
+                    if len(shown) >= limit_for_you:
+                        break
+                if len(shown) >= limit_for_you:
+                    break
+            st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        st.info("Click Refresh to fetch your personalized picks.")
+
 
 # -----------------------------
 # Footer

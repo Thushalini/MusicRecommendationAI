@@ -79,7 +79,9 @@ def refresh_token_if_needed(resp: requests.Response) -> bool:
         return True
     return False
 
+
 def sp_get(url: str, params: dict | None = None) -> dict | None:
+    r = None
     try:
         r = SESSION.get(url, headers=HEADERS, params=params, timeout=12)
         if refresh_token_if_needed(r):
@@ -87,7 +89,28 @@ def sp_get(url: str, params: dict | None = None) -> dict | None:
         r.raise_for_status()
         return r.json()
     except requests.exceptions.RequestException as e:
-        url_dbg = getattr(r, "url", url)
+        url_dbg = getattr(r, "url", url) if r is not None else url
+        print(f"HTTP Error: {getattr(e, 'response', None) and getattr(e.response,'status_code',None)} | {e} | URL: {url_dbg}")
+        return None
+
+def sp_get_with_token(url: str, params: dict | None = None, user_token: Optional[str] = None) -> dict | None:
+    """
+    If user_token provided, use it; otherwise fall back to app-level client-credentials token.
+    This is synchronous to match the rest of spotify.py (requests-based).
+    """
+    headers = {"Authorization": f"Bearer {user_token}"} if user_token else HEADERS
+    r = None
+    try:
+        r = SESSION.get(url, headers=headers, params=params, timeout=12)
+        # if using app token and we got 401 -> refresh app token (existing logic)
+        if user_token is None and refresh_token_if_needed(r):
+            r = SESSION.get(url, headers=HEADERS, params=params, timeout=12)
+        # If user token and 401 returned, we cannot refresh here (refresh requires server-side refresh_token).
+        # Caller should call backend /spotify/token/{user_id} to refresh and re-call.
+        r.raise_for_status()
+        return r.json()
+    except requests.exceptions.RequestException as e:
+        url_dbg = getattr(r, "url", url) if r is not None else url
         print(f"HTTP Error: {getattr(e, 'response', None) and getattr(e.response,'status_code',None)} | {e} | URL: {url_dbg}")
         return None
 
@@ -475,10 +498,10 @@ def search_playlists_and_collect_tracks(
             pl_id = pl.get("id")
             if not pl_id:
                 continue
-            tracks_params = {"limit": per_playlist_limit}
+            tracks_params: Dict[str, str | int] = {"limit": int(per_playlist_limit)}
             if market:
-                tracks_params["market"] = market
-            tracks_params["offset"] = _rand_offset(200)
+                tracks_params["market"] = str(market)
+            tracks_params["offset"] = int(_rand_offset(200))
 
             tracks_data = sp_get(f"https://api.spotify.com/v1/playlists/{pl_id}/tracks", params=tracks_params)
             if not tracks_data or "items" not in tracks_data:

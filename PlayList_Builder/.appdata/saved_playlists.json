@@ -163,5 +163,519 @@
         "reason": "features unavailable"
       }
     ]
+  },
+  {
+    "id": "20251016-102856-c34417",
+    "title": "chill · study · pop",
+    "created_at": "2025-10-16T10:28:56",
+    "request": {
+      "vibe_description": "lazy sunny afternoon",
+      "mood": "chill",
+      "activity": "study",
+      "genre_or_language": "pop",
+      "exclude_explicit": false,
+      "limit": 12
+    },
+    "description": "A chill playlist tailored for study. Smooth flow and consistent vibe curated from the selected tracks.",
+    "tracks": [
+      {
+        "id": "1I37Zz2g3hk9eWxaNkj031",
+        "name": "Your Idol",
+        "artists": [
+          "Saja Boys",
+          "Andrew Choi",
+          "Neckwav",
+          "Danny Chung",
+          "KEVIN WOO",
+          "samUIL Lee",
+          "KPop Demon Hunters Cast"
+        ],
+        "album": "KPop Demon Hunters (Soundtrack from the Netflix Film)",
+        "spotify_url": "https://open.spotify.com/track/1I37Zz2g3hk9eWxaNkj031",
+        "preview_url": null,
+        "score": 0.08758320421371327,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "0So2sgVa8aJiARPl2P29u2",
+        "name": "Pope Is a Rockstar",
+        "artists": [
+          "SALES"
+        ],
+        "album": "SALES LP",
+        "spotify_url": "https://open.spotify.com/track/0So2sgVa8aJiARPl2P29u2",
+        "preview_url": null,
+        "score": 0.08663143380310867,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "6kxkMrPqppgT3TQjOyhAYk",
+        "name": "Popcorn",
+        "artists": [
+          "D.O."
+        ],
+        "album": "BLOSSOM - THE 3RD MINI ALBUM",
+        "spotify_url": "https://open.spotify.com/track/6kxkMrPqppgT3TQjOyhAYk",
+        "preview_url": null,
+        "score": 0.0866096400246053,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "6GrWJnpm3BmlDLnVRbtljY",
+        "name": "POP",
+        "artists": [
+          "STARKIDS"
+        ],
+        "album": "POP",
+        "spotify_url": "https://open.spotify.com/track/6GrWJnpm3BmlDLnVRbtljY",
+        "preview_url": null,
+        "score": 0.08638363088665571,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "3em2uN4cCWHcCXhjMzJ8ps",
+        "name": "POP/STARS",
+        "artists": [
+          "K/DA",
+          "Madison Beer",
+          "i-dle",
+          "Jaira Burns",
+          "League of Legends"
+        ],
+        "album": "POP/STARS",
+        "spotify_url": "https://open.spotify.com/track/3em2uN4cCWHcCXhjMzJ8ps",
+        "preview_url": null,
+        "score": 0.08077134340137974,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "5sBDrrtLGbV64QJnEqfjer",
+        "name": "What It Sounds Like",
+        "artists": [
+          "HUNTR/X",
+          "EJAE",
+          "AUDREY NUNA",
+          "REI AMI",
+          "KPop Demon Hunters Cast"
+        ],
+        "album": "KPop Demon Hunters (Soundtrack from the Netflix Film)",
+        "spotify_url": "https://open.spotify.com/track/5sBDrrtLGbV64QJnEqfjer",
+        "preview_url": null,
+        "score": 0.08017994645321981,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "3RXUgPNIbUgFxsDWuBQEt6",
+        "name": "How It’s Done",
+        "artists": [
+          "HUNTR/X",
+          "EJAE",
+          "AUDREY NUNA",
+          "REI AMI",
+          "KPop Demon Hunters Cast"
+        ],
+        "album": "KPop Demon Hunters (Soundtrack from the Netflix Film)",
+        "spotify_url": "https://open.spotify.com/track/3RXUgPNIbUgFxsDWuBQEt6",
+        "preview_url": null,
+        "score": 0.07894466876092995,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "4FXSEdmbbeGmPIQltH27C8",
+        "name": "Pop",
+        "artists": [
+          "La Oreja de Van Gogh"
+        ],
+        "album": "El Viaje de Copperpot",
+        "spotify_url": "https://open.spotify.com/track/4FXSEdmbbeGmPIQltH27C8",
+        "preview_url": null,
+        "score": 0.07774728034736499,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "5DxDLsW6PsLz5gkwC7Mk5S",
+        "name": "Free",
+        "artists": [
+          "Rumi",
+          "Jinu",
+          "EJAE",
+          "Andrew Choi",
+          "KPop Demon Hunters Cast"
+        ],
+        "album": "KPop Demon Hunters (Soundtrack from the Netflix Film)",
+        "spotify_url": "https://open.spotify.com/track/5DxDLsW6PsLz5gkwC7Mk5S",
+        "preview_url": null,
+        "score": 0.07757075016397437,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "3lOMJTQTd6J34faYwASc33",
+        "name": "POP!",
+        "artists": [
+          "NAYEON"
+        ],
+        "album": "IM NAYEON",
+        "spotify_url": "https://open.spotify.com/track/3lOMJTQTd6J34faYwASc33",
+        "preview_url": null,
+        "score": 0.07648125052087623,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "6AviHKu3ydzAePBmzEi62v",
+        "name": "Popular Song",
+        "artists": [
+          "MIKA",
+          "Ariana Grande"
+        ],
+        "album": "Yours Truly",
+        "spotify_url": "https://open.spotify.com/track/6AviHKu3ydzAePBmzEi62v",
+        "preview_url": null,
+        "score": 0.07320583590512766,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "1UWEafiPTYY6Ym2GKxTCGg",
+        "name": "POP",
+        "artists": [
+          "Güneş"
+        ],
+        "album": "POP",
+        "spotify_url": "https://open.spotify.com/track/1UWEafiPTYY6Ym2GKxTCGg",
+        "preview_url": null,
+        "score": 0.07311795655935269,
+        "reason": "features unavailable"
+      }
+    ],
+    "user": null
+  },
+  {
+    "id": "20251016-103112-4cb6eb",
+    "title": "chill · study · pop",
+    "created_at": "2025-10-16T10:31:12",
+    "request": {
+      "vibe_description": "lazy sunny afternoon",
+      "mood": "angry",
+      "activity": "relax",
+      "genre_or_language": "lofi",
+      "exclude_explicit": false,
+      "limit": 12
+    },
+    "description": "A angry playlist tailored for relax. Smooth flow and consistent vibe curated from the selected tracks.",
+    "tracks": [
+      {
+        "id": "1i6mmgqeV4IacJkvZERNCw",
+        "name": "Lazy Sunday",
+        "artists": [
+          "Lofi Beats"
+        ],
+        "album": "Lofi Pug",
+        "spotify_url": "https://open.spotify.com/track/1i6mmgqeV4IacJkvZERNCw",
+        "preview_url": null,
+        "score": 0.05915171123122635,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "1HMlNIdqOXg9CIHSozqAux",
+        "name": "Lazy Sunday",
+        "artists": [
+          "Lofi Beats"
+        ],
+        "album": "Morning Focus",
+        "spotify_url": "https://open.spotify.com/track/1HMlNIdqOXg9CIHSozqAux",
+        "preview_url": null,
+        "score": 0.05736154435328262,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "2DkAvEnG7L2JttWEyEuGOJ",
+        "name": "Lazy",
+        "artists": [
+          "Enjoy Lofi"
+        ],
+        "album": "Chill Vibes 2024: The Best Lofi Music for Your Chill Days",
+        "spotify_url": "https://open.spotify.com/track/2DkAvEnG7L2JttWEyEuGOJ",
+        "preview_url": null,
+        "score": 0.04524823133507297,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "2z54mhIS5VTGm5UrM0FZ0O",
+        "name": "Lazy Sunday",
+        "artists": [
+          "Crownie Lofi"
+        ],
+        "album": "Study & Chill",
+        "spotify_url": "https://open.spotify.com/track/2z54mhIS5VTGm5UrM0FZ0O",
+        "preview_url": null,
+        "score": 0.04031767746743031,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "49TzOSFllWmTpstjHbDx5t",
+        "name": "Lazy Afternoon",
+        "artists": [
+          "MyceliumBug",
+          "drmycat"
+        ],
+        "album": "Lazy Afternoon",
+        "spotify_url": "https://open.spotify.com/track/49TzOSFllWmTpstjHbDx5t",
+        "preview_url": null,
+        "score": 0.034977591553021055,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "3kzlgkr0If7gnInlAocKFp",
+        "name": "Lazy Days",
+        "artists": [
+          "Isl. Luna"
+        ],
+        "album": "Lifted By Light",
+        "spotify_url": "https://open.spotify.com/track/3kzlgkr0If7gnInlAocKFp",
+        "preview_url": null,
+        "score": 0.026511523885576968,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "4oPrUHjfkWFqhvONDyZn5B",
+        "name": "Lazy Evening",
+        "artists": [
+          "Bequem",
+          "LOKY"
+        ],
+        "album": "Lazy Evening",
+        "spotify_url": "https://open.spotify.com/track/4oPrUHjfkWFqhvONDyZn5B",
+        "preview_url": null,
+        "score": 0.026085965498303235,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "0lOUAUNvIOxJ4SsrjjNCVJ",
+        "name": "sunny vibes",
+        "artists": [
+          "ye xin"
+        ],
+        "album": "good morning darling",
+        "spotify_url": "https://open.spotify.com/track/0lOUAUNvIOxJ4SsrjjNCVJ",
+        "preview_url": null,
+        "score": 0.024932220795201535,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "2bV4nOsY8m8vX86ZgScpJG",
+        "name": "Lazy Sunday",
+        "artists": [
+          "Yung Dark"
+        ],
+        "album": "Coffee Beats",
+        "spotify_url": "https://open.spotify.com/track/2bV4nOsY8m8vX86ZgScpJG",
+        "preview_url": null,
+        "score": 0.024528987767150588,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "6XjGdu5PeDnpNma7AjYVCb",
+        "name": "Lazy River",
+        "artists": [
+          "Notation",
+          "Amess",
+          "David Chief",
+          "rabson beats"
+        ],
+        "album": "Burlington Vermont",
+        "spotify_url": "https://open.spotify.com/track/6XjGdu5PeDnpNma7AjYVCb",
+        "preview_url": null,
+        "score": 0.021209190019093667,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "1e1fn4FvGSuJ7wzYURDKxa",
+        "name": "Habits",
+        "artists": [
+          "Allem Iversom"
+        ],
+        "album": "Lazy Sunday",
+        "spotify_url": "https://open.spotify.com/track/1e1fn4FvGSuJ7wzYURDKxa",
+        "preview_url": null,
+        "score": 0.02069322955742947,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "4iFYyN6fIyzwJS5O1h3kIj",
+        "name": "lazy",
+        "artists": [
+          "fever.",
+          "Patiotic Records"
+        ],
+        "album": "lazy",
+        "spotify_url": "https://open.spotify.com/track/4iFYyN6fIyzwJS5O1h3kIj",
+        "preview_url": null,
+        "score": 0.01988625453180433,
+        "reason": "features unavailable"
+      }
+    ],
+    "user": null
+  },
+  {
+    "id": "20251016-132557-3868f0",
+    "title": "chill · study · pop",
+    "created_at": "2025-10-16T13:25:57",
+    "request": {
+      "vibe_description": "date night songs",
+      "mood": "chill",
+      "activity": "study",
+      "genre_or_language": "pop",
+      "exclude_explicit": false,
+      "limit": 12
+    },
+    "description": "A chill playlist tailored for study. Smooth flow and consistent vibe curated from the selected tracks.",
+    "tracks": [
+      {
+        "id": "6aXoZ1Grxqh282qUCstLcj",
+        "name": "Forever",
+        "artists": [
+          "Lewis Capaldi"
+        ],
+        "album": "late night study vibe",
+        "spotify_url": "https://open.spotify.com/track/6aXoZ1Grxqh282qUCstLcj",
+        "preview_url": null,
+        "score": 0.0797359804714227,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "4BfnTvbH5dSRniK8b3aSta",
+        "name": "Date Vs Tareek",
+        "artists": [
+          "Pavitar Lassoi"
+        ],
+        "album": "Date Vs Tareek",
+        "spotify_url": "https://open.spotify.com/track/4BfnTvbH5dSRniK8b3aSta",
+        "preview_url": null,
+        "score": 0.07742206746634601,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "75cRI9V3cL94eZK2EKVQ30",
+        "name": "ME N U DATE",
+        "artists": [
+          "Odetari"
+        ],
+        "album": "XIII SORROWS",
+        "spotify_url": "https://open.spotify.com/track/75cRI9V3cL94eZK2EKVQ30",
+        "preview_url": null,
+        "score": 0.0746005999971435,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "4DMtAUYRAGWJ7VeDDXfKhN",
+        "name": "Date me! Not them",
+        "artists": [
+          "たかやん"
+        ],
+        "album": "Let's meet in our dream",
+        "spotify_url": "https://open.spotify.com/track/4DMtAUYRAGWJ7VeDDXfKhN",
+        "preview_url": null,
+        "score": 0.07408820862301249,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "7wmkSBEDuDuvKuefJ6JNoq",
+        "name": "Date Rush",
+        "artists": [
+          "Amerado"
+        ],
+        "album": "Date Rush",
+        "spotify_url": "https://open.spotify.com/track/7wmkSBEDuDuvKuefJ6JNoq",
+        "preview_url": null,
+        "score": 0.07170962509127057,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "2HM0CidS8RJZnDuZkRF6nt",
+        "name": "Hold Me While You Wait",
+        "artists": [
+          "Lewis Capaldi"
+        ],
+        "album": "late night study vibe",
+        "spotify_url": "https://open.spotify.com/track/2HM0CidS8RJZnDuZkRF6nt",
+        "preview_url": null,
+        "score": 0.07076377133164671,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "4cVj3FfLJhhlorrFhcyfES",
+        "name": "DATE",
+        "artists": [
+          "Da-iCE"
+        ],
+        "album": "パラダイブ",
+        "spotify_url": "https://open.spotify.com/track/4cVj3FfLJhhlorrFhcyfES",
+        "preview_url": null,
+        "score": 0.07065611754947455,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "5U4iPIXYJ5h6H7zJhx6VVF",
+        "name": "Dates In Pickup Trucks",
+        "artists": [
+          "Kassi Ashton"
+        ],
+        "album": "Dates In Pickup Trucks",
+        "spotify_url": "https://open.spotify.com/track/5U4iPIXYJ5h6H7zJhx6VVF",
+        "preview_url": null,
+        "score": 0.06940414488507748,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "6i8MT01wUlUAXLoTZUPnca",
+        "name": "El ghalba date el aarbi lel ghorba",
+        "artists": [
+          "Cheb Azzedine"
+        ],
+        "album": "D'hake alia",
+        "spotify_url": "https://open.spotify.com/track/6i8MT01wUlUAXLoTZUPnca",
+        "preview_url": null,
+        "score": 0.06929952447603409,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "1IlODJS5TxeYie0EeTl7Sf",
+        "name": "Date Stamp",
+        "artists": [
+          "ABC"
+        ],
+        "album": "The Lexicon Of Love",
+        "spotify_url": "https://open.spotify.com/track/1IlODJS5TxeYie0EeTl7Sf",
+        "preview_url": null,
+        "score": 0.0684297737185878,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "1sGKU238q7eIPYRAvMHaAe",
+        "name": "Date Pe Chalungi",
+        "artists": [
+          "Harjeet Deewana",
+          "Swara Verma",
+          "Peehu Yadav"
+        ],
+        "album": "Date Pe Chalungi",
+        "spotify_url": "https://open.spotify.com/track/1sGKU238q7eIPYRAvMHaAe",
+        "preview_url": null,
+        "score": 0.06569023408929736,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "7vpB1jFZPn5a04hrUMUB1K",
+        "name": "ว้าวุ่น (On A Date)",
+        "artists": [
+          "YENTED"
+        ],
+        "album": "URDAWG",
+        "spotify_url": "https://open.spotify.com/track/7vpB1jFZPn5a04hrUMUB1K",
+        "preview_url": null,
+        "score": 0.06272608678746076,
+        "reason": "features unavailable"
+      }
+    ],
+    "user": null
   }
 ]

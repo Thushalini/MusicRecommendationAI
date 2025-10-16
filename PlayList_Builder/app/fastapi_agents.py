@@ -1,8 +1,8 @@
 # app/fastapi_agents.py
-from typing import Optional, List, Dict, Any
-import os
-
-from fastapi import FastAPI, HTTPException, Header, Depends, APIRouter
+from __future__ import annotations
+from typing import Optional, List, Dict, Any, Callable
+import os, json, httpx
+from fastapi import FastAPI, HTTPException, Header, Depends, APIRouter, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv, find_dotenv
@@ -11,20 +11,7 @@ from app.mood_detector import detect_mood as detect_mood_agent
 from app.llm_helper import classify_genre
 from app.mood_detector import MODEL_PATH, _PIPELINE as _MODEL
 
-# OPTIONAL fusion helpers (color/emoji/SAM/quiz). Keep try/except to avoid crashes if files are missing.
-try:
-    from app.mood_fusion import fuse_mood as fuse_mood_helper
-    from app.mood_signals import color_signal, emoji_signal, sam_to_mood, quiz_signal, rg_quiz_signal
-    _HAS_FUSION = True
-except Exception:
-    _HAS_FUSION = False
-
-# If you already have a router in app/routes/mood_routes.py that exposes /mood/fuse,
-# you can still include it below. This file also exposes /mood/fuse directly.
-try:
-    from app.routes.mood_routes import router as mood_router
-except Exception:
-    mood_router = None
+from app.user_pref_manager import recommend_for_you
 
 # ----------------------------------
 # Load env
@@ -39,14 +26,13 @@ API_KEY = os.getenv("AGENTS_API_KEY", "dev-key-change-me")
 def require_api_key(x_api_key: str = Header(default="")):
     if x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    return True
 
 # ----------------------------------
 # App
 # ----------------------------------
 app = FastAPI(
     title="Playlist Builder – NLP Agent API",
-    version="1.1.0",
+    version="1.2.0",
     description="NLP helpers: mood/genre + fused mood endpoint for multi-signal inputs."
 )
 
@@ -54,7 +40,7 @@ _default_origins: List[str] = [
     "http://localhost:8501", "http://127.0.0.1:8501",
     "http://localhost", "http://127.0.0.1"
 ]
-_env_origins = os.getenv("AGENTS_CORS_ORIGINS", "").strip()
+_env_origins = (os.getenv("AGENTS_CORS_ORIGINS") or "").strip()
 allow_origins = (
     [o.strip() for o in _env_origins.split(",") if o.strip()]
     if _env_origins else _default_origins
@@ -67,6 +53,76 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+
+
+router_spotify = APIRouter(prefix="/spotify", tags=["spotify"])
+
+
+API_KEY = os.getenv("AGENTS_API_KEY", "dev-key-change-me")
+
+def _check_api_key(x_api_key: str = Header(...)):
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    return True
+
+@router_spotify.get("/for_you")
+async def for_you_recs(
+    ok: bool = Depends(_check_api_key),
+    limit: int = Query(24, ge=1, le=50),
+    authorization: str = Header(default=""),
+):
+    # Expect user access token from Authorization: Bearer <token>
+    if not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=400, detail="Missing Spotify Bearer token")
+    token = authorization.split(" ", 1)[1].strip()
+    try:
+        data = await recommend_for_you(token, limit=limit)
+        return {"ok": True, **data}
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
+
+
+
+
+
+# ----------------------------------
+# Optional fusion helpers (color/emoji/SAM/quiz)
+# Provide safe stubs first so Pylance never flags "possibly unbound".
+# ----------------------------------
+def _stub_dict(*args, **kwargs): return {}
+def _stub_tuple(*args, **kwargs): return ("unknown", 0.5)
+
+color_signal: Callable[..., Dict[str, float]] = _stub_dict
+emoji_signal: Callable[..., Dict[str, float]] = _stub_dict
+sam_to_mood: Callable[..., Dict[str, float]] = _stub_dict  # or Tuple[str,float] in your real impl
+quiz_signal: Callable[..., Dict[str, float]] = _stub_dict
+rg_quiz_signal: Callable[..., Dict[str, Any]] = _stub_dict
+fuse_mood_helper: Callable[..., Any] = _stub_tuple
+_HAS_FUSION = False
+
+try:
+    from app.mood_fusion import fuse_mood as fuse_mood_helper  # type: ignore
+    from app.mood_signals import (                           # type: ignore
+        color_signal, emoji_signal, sam_to_mood,
+        quiz_signal, rg_quiz_signal
+    )
+    _HAS_FUSION = True
+except Exception:
+    _HAS_FUSION = False
+
+# If you already have a router for mood endpoints, include it too (optional).
+try:
+    from app.routes.mood_routes import router as mood_router  # type: ignore
+except Exception:
+    mood_router = None
+
+# If you have user profile routes unrelated to Spotify, keep them:
+try:
+    from app.routes.user_profile_routes import router as user_profile_router  # type: ignore
+except Exception:
+    user_profile_router = None
 
 # ----------------------------------
 # Schemas
@@ -89,28 +145,29 @@ class AnalyzeResponse(BaseModel):
     genre_confidence: Optional[float] = None
 
 class FuseInput(BaseModel):
-    # primary text + optional side-signals
     text: Optional[str] = ""
     color: Optional[str] = None
     emoji: Optional[str] = None
-    # SAM (Self-Assessment Manikin) style inputs: valence/arousal in [-1..1] or [0..1]
     valence: Optional[float] = None
     arousal: Optional[float] = None
-    # quiz: arbitrary dict like {"q1":"A", "q2":3, ...}
     quiz: Optional[Dict[str, Any]] = None
     rg_quiz: Optional[Dict[str, Any]] = None
 
 class FuseResponse(BaseModel):
     mood: str
     confidence: float
-    parts: Dict[str, Any]  # per-signal scores/contributions
+    parts: Dict[str, Any]
 
 # ----------------------------------
 # Routers
 # ----------------------------------
 if mood_router:
-    # protect your existing mood routes (including any /mood/fuse already defined there)
     app.include_router(mood_router, dependencies=[Depends(require_api_key)])
+
+if user_profile_router:
+    app.include_router(user_profile_router, dependencies=[Depends(require_api_key)])
+
+app.include_router(router_spotify)
 
 # Utility routes
 @app.get("/")
@@ -126,7 +183,7 @@ def health():
 # ----------------------------------
 router = APIRouter()
 
-@router.get("/mood/model_status")
+@router.get("/mood/model_status", dependencies=[Depends(require_api_key)])
 def mood_model_status():
     loaded = _MODEL is not None
     labels = _MODEL.get("labels") if loaded and isinstance(_MODEL, dict) else []
@@ -140,7 +197,7 @@ def mood_model_status():
 app.include_router(router)
 
 # ----------------------------------
-# Baseline endpoints
+# Baseline endpoints (UNCHANGED)
 # ----------------------------------
 @app.post("/mood", response_model=MoodResponse, dependencies=[Depends(require_api_key)])
 def api_mood(inp: TextInput):
@@ -208,17 +265,16 @@ def api_analyze(inp: TextInput):
     )
 
 # ----------------------------------
-# FUSED MOOD: /mood/fuse (text + optional signals)
+# FUSED MOOD: /mood/fuse (UNCHANGED)
 # ----------------------------------
 @app.post("/mood/fuse", response_model=FuseResponse, dependencies=[Depends(require_api_key)])
 def api_mood_fuse(inp: FuseInput):
-    """
-    Accepts text plus optional {color, emoji, valence, arousal, quiz, rg_quiz} and returns a fused mood.
-    """
-    if (inp.text is None or not str(inp.text).strip()) and not any([inp.color, inp.emoji, inp.valence, inp.arousal, inp.quiz, inp.rg_quiz]):
+    if (inp.text is None or not str(inp.text).strip()) and not any(
+        [inp.color, inp.emoji, inp.valence, inp.arousal, inp.quiz, inp.rg_quiz]
+    ):
         raise HTTPException(status_code=400, detail="Provide at least text or one side-signal (color/emoji/SAM/quiz/RG quiz).")
 
-    # --- 1) TEXT signal --------------------------------------------------------
+    # 1) TEXT
     text_label, text_conf, text_scores = "unknown", 0.5, {}
     if inp.text:
         m_raw = detect_mood_agent(str(inp.text).strip())
@@ -234,82 +290,77 @@ def api_mood_fuse(inp: FuseInput):
         else:
             text_label, text_conf = str(m_raw), 0.5
 
-    # --- 2) SIDE SIGNALS -------------------------------------------------------
-    color_scores = {}
-    emoji_scores = {}
-    sam_scores   = {}
-    quiz_scores  = {}   # tiny 3Q quiz → dist over MOODS
-    rg_dist      = {}   # RG 10Q quiz → dist over MOODS
-    rg_final     = None # {"label","x","y","confidence","method":"quiz_rg"}
+    # 2) SIDE SIGNALS
+    color_scores: Dict[str, float] = {}
+    emoji_scores: Dict[str, float] = {}
+    sam_scores: Dict[str, float] = {}
+    quiz_scores: Dict[str, float] = {}
+    rg_dist: Dict[str, float] = {}
+    rg_final: Optional[Dict[str, Any]] = None
 
-    if _HAS_FUSION:
-        if inp.color:
-            try: color_scores = color_signal(inp.color)
-            except Exception: color_scores = {}
-
-        if inp.emoji:
-            try: emoji_scores = emoji_signal(inp.emoji)
-            except Exception: emoji_scores = {}
-
-        if inp.valence is not None and inp.arousal is not None:
-            try: sam_scores = sam_to_mood(float(inp.valence), float(inp.arousal))
-            except Exception: sam_scores = {}
-
-        if inp.quiz:
-            try: quiz_scores = quiz_signal(dict(inp.quiz))
-            except Exception: quiz_scores = {}
-
-        # NEW: RG quiz (primary)
-        if getattr(inp, "rg_quiz", None):
-            try:
-                out = rg_quiz_signal({"quiz": dict(inp.rg_quiz)})
-                rg_final = out.get("final")
-                rg_dist  = out.get("dist", {})
-            except Exception:
-                rg_final, rg_dist = None, {}
-
-    # --- 3) FUSE ---------------------------------------------------------------
     if _HAS_FUSION:
         try:
-            # Pass RG distribution as an extra channel (if your fuser supports kwargs, add it).
+            if inp.color:   color_scores = dict(color_signal(inp.color)) or {}
+        except Exception:   color_scores = {}
+        try:
+            if inp.emoji:   emoji_scores = dict(emoji_signal(inp.emoji)) or {}
+        except Exception:   emoji_scores = {}
+        try:
+            if inp.valence is not None and inp.arousal is not None:
+                sam_scores = dict(sam_to_mood(float(inp.valence), float(inp.arousal))) or {}
+        except Exception:   sam_scores = {}
+        try:
+            if inp.quiz:    quiz_scores = dict(quiz_signal(dict(inp.quiz))) or {}
+        except Exception:   quiz_scores = {}
+        try:
+            if getattr(inp, "rg_quiz", None):
+                quiz_dict = dict(inp.rg_quiz) if inp.rg_quiz is not None else {}
+                out = rg_quiz_signal({"quiz": quiz_dict}) or {}
+                rg_final = out.get("final")
+                rg_dist  = out.get("dist", {}) or {}
+        except Exception:
+            rg_final, rg_dist = None, {}
+
+    # 3) FUSE
+    if _HAS_FUSION:
+        try:
             fused = fuse_mood_helper(
                 text_scores=text_scores or {text_label: text_conf},
                 color_scores=color_scores,
                 emoji_scores=emoji_scores,
                 sam_scores=sam_scores,
                 quiz_scores=quiz_scores,
-                rg_quiz_scores=rg_dist,  # safe to pass empty {}
             )
-
             if isinstance(fused, (list, tuple)) and len(fused) >= 2:
                 final_label = str(fused[0]); final_conf = float(fused[1])
-                parts = fused[2] if len(fused) > 2 and isinstance(fused[2], dict) else {
-                    "text": text_scores, "color": color_scores, "emoji": emoji_scores,
-                    "sam": sam_scores, "quiz": quiz_scores, "rg_quiz": rg_dist
-                }
+                parts = fused[2] if len(fused) > 2 and isinstance(fused[2], dict) else {}
             elif isinstance(fused, dict):
                 final_label = str(fused.get("label", text_label))
                 final_conf  = float(fused.get("confidence", text_conf))
-                parts = dict(fused.get("parts", {
-                    "text": text_scores, "color": color_scores, "emoji": emoji_scores,
-                    "sam": sam_scores, "quiz": quiz_scores, "rg_quiz": rg_dist
-                }))
+                parts = dict(fused.get("parts", {}))
             else:
                 final_label, final_conf = text_label, text_conf
-                parts = {"text": text_scores}
+                parts = {}
         except Exception:
             final_label, final_conf = text_label, text_conf
-            parts = {"text": text_scores}
+            parts = {}
     else:
         final_label, final_conf = text_label, text_conf
-        parts = {"text": text_scores}
+        parts = {}
 
-    # --- 4) Prefer RG quiz as primary label if present -------------------------
+    base_parts = {
+        "text": text_scores, "color": color_scores, "emoji": emoji_scores,
+        "sam": sam_scores, "quiz": quiz_scores, "rg_quiz": rg_dist
+    }
+    if not isinstance(parts, dict):
+        parts = base_parts
+    else:
+        parts = {**base_parts, **parts}
+
     if rg_final and isinstance(rg_final, dict):
         rg_label = str(rg_final.get("label", "") or "").strip()
         rg_conf  = float(rg_final.get("confidence", 0.9))
         if rg_label:
-            # Override to ensure RG is the main method
             final_label = rg_label
             final_conf  = max(final_conf, rg_conf)
             parts["rg_quiz_final"] = rg_final

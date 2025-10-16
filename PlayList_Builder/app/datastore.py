@@ -102,6 +102,7 @@ def save_playlist(
         "request": request_meta,
         "description": description or "",
         "tracks": tracks,
+        "user": request_meta.get("user") if isinstance(request_meta, dict) else None,
     }
     items.append(payload)
     _write_all(items)
