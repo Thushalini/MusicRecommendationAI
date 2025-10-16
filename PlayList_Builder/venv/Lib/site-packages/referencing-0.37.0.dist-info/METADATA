@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: referencing
-Version: 0.36.2
+Version: 0.37.0
 Summary: JSON Referencing + Python
 Project-URL: Documentation, https://referencing.readthedocs.io/
 Project-URL: Homepage, https://github.com/python-jsonschema/referencing
@@ -17,16 +17,16 @@ Classifier: Development Status :: 3 - Alpha
 Classifier: Intended Audience :: Developers
 Classifier: Operating System :: OS Independent
 Classifier: Programming Language :: Python
-Classifier: Programming Language :: Python :: 3.9
 Classifier: Programming Language :: Python :: 3.10
 Classifier: Programming Language :: Python :: 3.11
 Classifier: Programming Language :: Python :: 3.12
 Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
 Classifier: Programming Language :: Python :: Implementation :: CPython
 Classifier: Programming Language :: Python :: Implementation :: PyPy
 Classifier: Topic :: File Formats :: JSON
 Classifier: Topic :: File Formats :: JSON :: JSON Schema
-Requires-Python: >=3.9
+Requires-Python: >=3.10
 Requires-Dist: attrs>=22.2.0
 Requires-Dist: rpds-py>=0.7.0
 Requires-Dist: typing-extensions>=4.4.0; python_version < '3.13'
