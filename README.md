@@ -15,28 +15,12 @@ It generates personalized Spotify playlists based on **mood, genre, and context*
 
 ---
 
-## 📂 Project Structure
-```
-PlayList_Builder/
-│── app/
-│   ├── spotify.py        # Spotify API integration
-│   ├── scoring.py        # Mood/context scoring logic
-│   ├── llm_helper.py     # (optional) LLM for playlist descriptions
-│   ├── datastore.py      # Save/load playlists locally
-│── streamlit_app.py      # Frontend UI
-│── main.py               # FastAPI backend
-│── requirements.txt      # Dependencies
-│── .env                  # API keys & config (not committed)
-```
-
----
-
 ## ⚙️ Installation
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-repo/playlist-builder.git
-   cd playlist-builder
+   git clone https://github.com/your-repo/playList-Builder.git
+   cd playList-Builder
    ```
 
 2. Create a virtual environment:
@@ -61,7 +45,7 @@ Create a **`.env`** file in the project root:
 # Spotify API
 SPOTIFY_CLIENT_ID=your_spotify_client_id
 SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
-SPOTIFY_REDIRECT_URI=http://localhost:8888/callback
+SPOTIFY_REDIRECT_URI=http://localhost:8000/callback
 SPOTIFY_MARKET=IN
 
 # API
@@ -75,20 +59,23 @@ OPENAI_API_KEY=your_openapi_key
 
 ## ▶️ Running the Project
 
-**FastAPI backend** will automatically start
+**FastAPI backend** 
+```bash
+uvicorn app.fastapi_agents:app --host 127.0.0.1 --port 8000 --reload
+```
 
 Start the **Streamlit UI**:
 ```bash
-streamlit run streamlit_app.py
+streamlit run main.py
 ```
 
-Now open [http://localhost:8501](http://localhost:8501) in your browser.
+Now open [http://localhost:8501](http://localhost:8000) in your browser.
 
 ---
 
 ## 🧪 Example Request (FastAPI)
 ```bash
-curl -X POST http://127.0.0.1:8000/build_playlist \
+curl -X POST http://127.0.0.1:8000/playList_Builder \
   -H "Content-Type: application/json" \
   -H "x-api-key: dev-key-change-me" \
   -d '{
