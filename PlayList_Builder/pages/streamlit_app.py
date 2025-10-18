@@ -14,7 +14,8 @@ if ROOT not in sys.path:
 from app.spotify import generate_playlist_from_user_settings           # UNCHANGED
 from app.llm_helper import generate_playlist_description              # UNCHANGED
 from app.datastore import save_playlist, list_playlists, load_playlist, delete_playlist  # UNCHANGED
-from app.auth import create_user, authenticate, get_profile      # NEW local auth
+
+import streamlit.components.v1 as components  
 
 # -----------------------------
 # Env / config
@@ -24,6 +25,7 @@ load_dotenv(dotenv_path, override=False)
 
 API_BASE = os.getenv("AGENTS_API_BASE", "http://127.0.0.1:8000")
 API_KEY  = os.getenv("AGENTS_API_KEY",  "dev-key-change-me")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:8501")
 def _h(): return {"x-api-key": API_KEY}
 
 # -----------------------------
@@ -112,55 +114,142 @@ if "gen_data" not in st.session_state:
     st.session_state.gen_data = None
 if "selected_saved_id" not in st.session_state:
     st.session_state.selected_saved_id = None
-if "user" not in st.session_state:
-    st.session_state.user = None  # {"email","display_name","avatar_url"}
+if "spotify_access_token" not in st.session_state:
+    st.session_state.spotify_access_token = None
+if "spotify_profile" not in st.session_state:
+    st.session_state.spotify_profile = None
 if "bootstrapped" not in st.session_state:
     st.session_state.bootstrapped = True  # no server sync now
 
+
+
 # -----------------------------
-# Local Auth UI (NEW)
+# OAuth helpers (browser ↔ backend)
 # -----------------------------
-def _login_ui():
-    tabs = st.tabs(["Login", "Sign up"])
-    with tabs[0]:
-        st.subheader("Login")
-        email = st.text_input("Email", key="login_email")
-        pw    = st.text_input("Password", type="password", key="login_pw")
-        if st.button("Login", use_container_width=True, key="btn_login"):
-            user = authenticate(email, pw)
-            if user:
-                st.session_state.user = user
-                st.success(f"Welcome back, {user['display_name']}!")
-                st.rerun()
-            else:
-                st.error("Invalid credentials.")
-    with tabs[1]:
-        st.subheader("Create account")
-        se = st.text_input("Email", key="signup_email")
-        sn = st.text_input("Display name", key="signup_name")
-        sp = st.text_input("Password (min 6 chars)", type="password", key="signup_pw")
-        if st.button("Create account", use_container_width=True, key="btn_signup"):
-            try:
-                user = create_user(se, sn, sp)
-                st.success("Account created. You can log in now.")
-            except Exception as e:
-                st.error(str(e))
+def _inject_fetch_session():
+    components.html(f"""
+<html><body>
+<script>
+(async () => {{
+  try {{
+    const resp = await fetch('{API_BASE}/spotify/session/me', {{
+      credentials: 'include',
+      headers: {{ 'Accept':'application/json' }}
+    }});
+    if (!resp.ok) {{
+      // if unauthorized, clear any stale params and leave (sidebar will show Connect)
+      const qp = new URLSearchParams(window.location.search);
+      ["spotify_token","sp_name","sp_email","sp_avatar"].forEach(k => qp.delete(k));
+      history.replaceState(null, '', window.location.pathname + (qp.toString() ? ('?' + qp.toString()) : ''));
+      return;
+    }}
+    const data = await resp.json();
+
+    const token = data.access_token || '';
+    const prof  = data.profile || {{}};
+    const name  = encodeURIComponent(prof.display_name || '');
+    const email = encodeURIComponent(prof.email || '');
+    const avatar= encodeURIComponent((prof.images && prof.images[0] && prof.images[0].url) || '');
+
+    const qp = new URLSearchParams(window.location.search);
+    if (token) qp.set('spotify_token', token);
+    if (name)  qp.set('sp_name', name);
+    if (email) qp.set('sp_email', email);
+    if (avatar)qp.set('sp_avatar', avatar);
+
+    history.replaceState(null, '', window.location.pathname + (qp.toString() ? ('?' + qp.toString()) : ''));
+  }} catch (e) {{
+    console.error('session/me failed', e);
+  }}
+}})();
+</script>
+</body></html>
+""", height=0)
+    
+_inject_fetch_session()
+
+
+def _session_watchdog():
+    components.html(f"""
+<html><body>
+<script>
+(async () => {{
+  try {{
+    const resp = await fetch('{API_BASE}/spotify/session/me', {{
+      credentials: 'include',
+      headers: {{ 'Accept':'application/json' }}
+    }});
+    if (resp.status === 401) {{
+      // lost session → send user back to login page
+      window.location.replace('{FRONTEND_URL}/pages/00_Landing.html');
+    }}
+  }} catch (e) {{
+    // network/other: ignore
+  }}
+}})();
+</script>
+</body></html>
+""", height=0)
+
+_session_watchdog()
+
+
+
+def _clear_qp(keys: List[str]):
+    # Remove sensitive params from URL once ingested
+    components.html(f"""
+    <html><body>
+    <script>
+    const keys = {json.dumps(keys)};
+    const qp = new URLSearchParams(window.location.search);
+    let changed = false;
+    keys.forEach(k => {{ if (qp.has(k)) {{ qp.delete(k); changed = true; }} }});
+    if (changed) {{
+        history.replaceState(null, '', window.location.pathname + (qp.toString() ? ('?' + qp.toString()) : ''));
+    }}
+    </script>
+    </body></html>
+    """, height=0)
+
+ 
+
+# Ingest token/profile from query params → session_state
+qp = st.query_params
+tok = qp.get("spotify_token")
+if isinstance(tok, str) and tok:
+    st.session_state.spotify_access_token = tok
+    # profile (optional)
+    prof = {
+        "display_name": qp.get("sp_name") or "",
+        "email": qp.get("sp_email") or "",
+        "avatar_url": qp.get("sp_avatar") or "",
+    }
+    st.session_state.spotify_profile = prof
+    # scrub url
+    _clear_qp(["spotify_token", "sp_name", "sp_email", "sp_avatar"])
+
+
 
 # -----------------------------
 # Sidebar (TOP: profile card • then controls)
 # -----------------------------
 with st.sidebar:
-    u = st.session_state.user
-    if not u:
-        st.markdown("#### Sign in")
-        _login_ui()
-        st.markdown("---")
-        st.stop()
+    prof = st.session_state.spotify_profile
+    token = st.session_state.spotify_access_token
+
+
+    if not token:
+        st.sidebar.warning("🔒 You’re not connected to Spotify. Some features may be limited.")
+        if st.sidebar.button("🎧 Connect Spotify"):
+            try:
+                st.switch_page("pages/00_landing.py")
+            except Exception:
+                st.stop()
 
     # Profile pill
-    avatar = u.get("avatar_url") or "https://avatars.githubusercontent.com/u/1?v=4"
-    name = u.get("display_name") or u.get("email")
-    sid = u.get("email")
+    avatar = (prof or {}).get("avatar_url") or "https://avatars.githubusercontent.com/u/1?v=4"
+    name = (prof or {}).get("display_name") or (prof or {}).get("email") or "Spotify user"
+    sid = (prof or {}).get("email") or "connected"
     st.markdown(
         f"""
 <div class="profile-card">
@@ -173,11 +262,32 @@ with st.sidebar:
 """,
         unsafe_allow_html=True,
     )
-    col_logout, _ = st.columns([1,3])
+    col_logout, col_refresh = st.columns([1,1])
     with col_logout:
         if st.button("Log out"):
-            st.session_state.user = None
-            st.rerun()
+            # backend logout (clear cookie) via browser (credentials include)
+            components.html(f"""
+            <html><body><script>
+            (async()=>{{
+            try {{
+                await fetch('{API_BASE}/spotify/logout', {{method:'POST', credentials:'include'}});
+            }}catch(e){{}}
+            location.replace('{FRONTEND_URL}');
+            }})();
+            </script></body></html>
+            """, height=0)
+            st.stop()
+    with col_refresh:
+        if st.button("Refresh token"):
+            # ask browser to refetch /session/me to rotate access token if needed
+            components.html(f"""
+            <html><body><script>
+            const qp = new URLSearchParams(window.location.search);
+            qp.set('fetch_session','1');
+            location.replace(window.location.pathname + '?' + qp.toString());
+            </script></body></html>
+            """, height=0)
+            st.stop()
 
     st.divider()
     st.subheader("Playlist Settings")
@@ -614,10 +724,8 @@ with tab_about:
 with tab_for_you:
     st.subheader("For You • personalized picks")
 
-    # If your Spotify OAuth stores a token in session, we will use backend /spotify/for_you.
     token = st.session_state.get("spotify_access_token")
 
-    # Fallback: lightweight profile from saved playlists (no external calls)
     def _profile_from_saved(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         from collections import Counter
         artists = Counter()
@@ -627,7 +735,6 @@ with tab_for_you:
             for t in (r.get("tracks") or []):
                 for a in (t.get("artists") or []):
                     artists[a] += 1
-                # if you store genres per track, they will be counted here (kept generic)
                 for g in (t.get("genres") or []):
                     genres[str(g).lower()] += 1
                 if t.get("id"): tracks[t["id"]] += 1
@@ -641,7 +748,6 @@ with tab_for_you:
     limit_for_you = cols[0].slider("How many", 8, 50, 24, 1, key="for_you_limit")
     refresh_for_you = cols[1].button("Refresh", key="for_you_refresh")
 
-    # Try backend recommendations first (requires token). Else, show a smart fallback list.
     if refresh_for_you or "for_you_cache" not in st.session_state:
         if token:
             try:
@@ -676,7 +782,6 @@ with tab_for_you:
             ])
         )
 
-        # Grid of simple recommendation cards
         st.markdown('<div class="grid">', unsafe_allow_html=True)
         for tr in recs[:limit_for_you]:
             tid = tr.get("id")
@@ -699,7 +804,6 @@ with tab_for_you:
         st.markdown("</div>", unsafe_allow_html=True)
 
     elif cache.get("note") == "no_token":
-        # Fallback: show insights + resurfacing from saved playlists
         rows = list_playlists()
         if not rows:
             st.info("No saved playlists yet. Save a few to unlock personalized recommendations.")
@@ -713,7 +817,6 @@ with tab_for_you:
                 ])
             )
             st.info("Connect Spotify in your backend to enable similar-track discovery. Showing some resurfaced favorites.")
-            # Resurface top tracks (unique) from saved playlists
             shown = set()
             st.markdown('<div class="grid">', unsafe_allow_html=True)
             for r in rows:

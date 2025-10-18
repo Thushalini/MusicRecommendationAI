@@ -43,10 +43,8 @@ hr{ border:none; border-top:1px solid rgba(255,255,255,.08); margin:10px 0 16px;
 # Helpers
 # -----------------------------
 def seg(label: str, options: list[str], index: int = 0):
-    try:
-        return st.segmented_control(label, options, selection_mode="single")
-    except Exception:
-        return st.radio(label, options, index=index, horizontal=True)
+    # Use st.radio as a replacement for segmented control
+    return st.radio(label, options, index=index, horizontal=True)
 
 def switch_to_playlist(mood_label: Optional[str]):
     # Save to session for streamlit_app.py

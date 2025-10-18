@@ -2,8 +2,10 @@
 from __future__ import annotations
 from typing import Optional, List, Dict, Any, Callable
 import os, json, httpx
-from fastapi import FastAPI, HTTPException, Header, Depends, APIRouter, Query
+import secrets, time
+from fastapi import FastAPI, HTTPException, Header, Depends, APIRouter, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv, find_dotenv
 
@@ -12,6 +14,15 @@ from app.llm_helper import classify_genre
 from app.mood_detector import MODEL_PATH, _PIPELINE as _MODEL
 
 from app.user_pref_manager import recommend_for_you
+
+# NEW: OAuth/session helpers
+from app.auth import (
+    new_state, pop_state, create_login_redirect_url,
+    exchange_code_for_tokens, fetch_spotify_me,
+    create_session, get_session, ensure_fresh_access_token,
+    delete_session
+)
+
 
 # ----------------------------------
 # Load env
@@ -22,6 +33,7 @@ load_dotenv(find_dotenv(), override=False)
 # Security (API key)
 # ----------------------------------
 API_KEY = os.getenv("AGENTS_API_KEY", "dev-key-change-me")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:8501")
 
 def require_api_key(x_api_key: str = Header(default="")):
     if x_api_key != API_KEY:
@@ -46,6 +58,8 @@ allow_origins = (
     if _env_origins else _default_origins
 )
 
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
@@ -56,11 +70,100 @@ app.add_middleware(
 
 
 
+# ----------------------------------
+# OAuth Login Flow (NEW)
+# ----------------------------------
+router_auth = APIRouter(prefix="/spotify", tags=["spotify auth"])
+
+@router_auth.get("/login")
+def spotify_login():
+    state = new_state()
+    url = create_login_redirect_url(state)
+    return RedirectResponse(url)
+
+@router_auth.get("/callback")
+async def spotify_callback(code: Optional[str] = None, state: Optional[str] = None):
+    if not code or not state or not pop_state(state):
+        raise HTTPException(status_code=400, detail="Invalid or expired state / code")
+
+    try:
+        tokens = await exchange_code_for_tokens(code)
+        profile = await fetch_spotify_me(tokens["access_token"])
+        sid = create_session(tokens, profile)
+
+        # set a secure HTTP-only cookie; then redirect back to UI
+        resp = RedirectResponse(url=f"{FRONTEND_URL}/?sid={sid}")
+        resp.set_cookie(  # optional: keep cookie for browser-only calls
+            key="sid",
+            value=sid,
+            httponly=True,
+            secure=False,   # True in production (HTTPS)
+            samesite="lax",
+            max_age=30*24*3600
+        )
+        return resp
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
+
+@router_auth.get("/session/me")
+async def session_me(request: Request, sid: Optional[str] = Query(default=None)):
+    sid = sid or request.cookies.get("sid") or (request.headers.get("X-Session-Id") or "").strip()
+    if not sid:
+        raise HTTPException(status_code=401, detail="No session")
+    rec = get_session(sid)
+    if not rec:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    access_token, rec = await ensure_fresh_access_token(sid)
+    return {
+        "sid": sid,
+        "profile": rec.get("profile", {}),
+        "token_type": "Bearer",
+        "access_token": access_token,
+        "expires_at": rec["tokens"]["expires_at"],
+    }
+
+
+@router_auth.get("/session/by_sid")
+async def session_by_sid(sid: str):
+    rec = get_session(sid)
+    if not rec:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    access_token, rec = await ensure_fresh_access_token(sid)
+    return {
+        "sid": sid,
+        "connected": True,
+        "profile": rec.get("profile", {}),
+        "token_type": "Bearer",
+        "access_token": access_token,
+        "expires_at": rec["tokens"]["expires_at"],
+    }
+
+
+@router_auth.post("/session/refresh")
+async def session_refresh(request: Request):
+    sid = request.cookies.get("sid") or (request.headers.get("X-Session-Id") or "").strip()
+    if not sid:
+        raise HTTPException(status_code=401, detail="No session")
+    access_token, rec = await ensure_fresh_access_token(sid)
+    return {"sid": sid, "access_token": access_token, "expires_at": rec["tokens"]["expires_at"]}
+
+@router_auth.post("/logout")
+def logout(request: Request):
+    sid = request.cookies.get("sid") or (request.headers.get("X-Session-Id") or "").strip()
+    if sid:
+        delete_session(sid)
+    resp = JSONResponse({"ok": True})
+    resp.delete_cookie("sid")
+    return resp
+
+
+
+# ----------------------------------
+# Spotify “For You” endpoint
+# ----------------------------------
 
 router_spotify = APIRouter(prefix="/spotify", tags=["spotify"])
 
-
-API_KEY = os.getenv("AGENTS_API_KEY", "dev-key-change-me")
 
 def _check_api_key(x_api_key: str = Header(...)):
     if x_api_key != API_KEY:
@@ -168,6 +271,7 @@ if user_profile_router:
     app.include_router(user_profile_router, dependencies=[Depends(require_api_key)])
 
 app.include_router(router_spotify)
+app.include_router(router_auth)
 
 # Utility routes
 @app.get("/")
