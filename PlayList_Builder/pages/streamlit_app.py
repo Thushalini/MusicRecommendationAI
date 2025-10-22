@@ -5,6 +5,7 @@
 import os, sys, json, requests, streamlit as st
 from dotenv import load_dotenv
 from typing import Any, Dict, List, Optional
+from urllib.parse import unquote
 
 # --- make project root importable (so 'app' package resolves) ---
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -28,6 +29,7 @@ API_KEY  = os.getenv("AGENTS_API_KEY",  "dev-key-change-me")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:8501")
 def _h(): return {"x-api-key": API_KEY}
 
+
 # -----------------------------
 # Page config
 # -----------------------------
@@ -38,8 +40,60 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+
+# --- Handle OAuth redirect / hydrate session_state ---
+
+
+# use the stable API (and after set_page_config)
+_q = st.query_params
+# Direct token in URL (DEV only)
+if _q.get("spotify_token"):
+    st.session_state["spotify_access_token"] = _q["spotify_token"][0]
+    
+    avatar_raw = _q.get("sp_avatar", [""])[0] if _q.get("sp_avatar") else ""
+    avatar_url = unquote(avatar_raw) if avatar_raw else ""
+    st.session_state["spotify_profile"] = {
+        "display_name": _q.get("sp_name", [""])[0],
+        "email": _q.get("sp_email", [""])[0],
+        "images": [{"url": avatar_url}] if avatar_url else [],
+    }
+# Or sid + fetch_session -> call backend to get token/profile
+elif _q.get("sid") and _q.get("fetch_session", ["0"])[0] == "1":
+    sid = _q["sid"][0]
+    try:
+        resp = requests.get(f"{API_BASE}/spotify/session/by_sid", params={"sid": sid}, timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        st.session_state["spotify_access_token"] = data.get("access_token") or data.get("access_token")
+        profile = data.get("profile", {}) or {}
+
+        # If profile was passed in redirect (sp_avatar) it may be in query params — prefer that
+        avatar_q = _q.get("sp_avatar", [None])[0] or ""
+        if avatar_q:
+            avatar_url = unquote(avatar_q)
+            profile_images = profile.get("images") or []
+            if not profile_images:
+                profile["images"] = [{"url": avatar_url}]
+
+        # Normalize alternative keys into Spotify-style images list
+        if not profile.get("images"):
+            alt = profile.get("avatar_url") or profile.get("avatar") or profile.get("picture")
+            if alt:
+                profile["images"] = [{"url": alt}]
+
+        st.session_state["spotify_profile"] = profile
+        st.session_state["sid"] = sid
+
+        # clear query params so tokens/avatars aren't left in the URL
+        st.experimental_set_query_params()
+    except Exception as e:
+        st.warning(f"Failed to hydrate Spotify session: {e}")
+
+
+
+
 # -----------------------------
-# Styles (UNCHANGED)
+# Styles 
 # -----------------------------
 st.markdown(
     """
@@ -54,15 +108,35 @@ st.markdown(
 section[data-testid="stSidebar"] { background: linear-gradient(180deg,#12151c,#0f1115)!important; border-right:var(--border); }
 section[data-testid="stSidebar"] .stMarkdown, section[data-testid="stSidebar"] p, section[data-testid="stSidebar"] label { color:var(--muted)!important; }
 
+/* Welcome hero — centered, card-like */
 .hero{ border:var(--border); background:linear-gradient(180deg,#141821dd,#0f1115cc); backdrop-filter:blur(8px);
        border-radius:var(--radius); padding:20px 24px; }
 .hero h1{ margin:0 0 6px 0; font-size:clamp(1.4rem,2.2vw,2.1rem); letter-spacing:.3px; }
 .hero p{ margin:0; color:var(--muted); }
+.hero__left{ flex:1; }
+.hero__title{ margin:0 0 8px 0; font-size:clamp(1.6rem,2.8vw,2.6rem); letter-spacing:.2px; font-weight:800; color:var(--text); }
+.hero__lead{ margin:0; color:var(--muted); font-size:1.05rem; line-height:1.4; }
+.hero__cta{ margin-top:16px; display:flex; gap:12px; align-items:center; }
+
+/* Large primary CTA */
+.cta-btn{
+  background:var(--primary)!important; color:#000!important; padding:12px 20px; font-weight:800; border-radius:12px; border:none;
+  box-shadow:0 10px 30px rgba(29,185,84,0.12); cursor:pointer; text-decoration:none;
+}
 
 .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"]>div, .stNumberInput input,
 .stMultiSelect div[data-baseweb="select"]>div {
   background: rgba(255,255,255,.04)!important; color:var(--text)!important; border:var(--border)!important; border-radius:12px!important;
 }
+
+.cta-ghost{ background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.06); padding:10px 16px; border-radius:12px; }
+
+/* Right panel preview */
+.hero__preview{ width:300px; min-width:220px; border-radius:12px; overflow:hidden; background:linear-gradient(180deg,#071217,#061014); padding:14px; border:var(--border); }
+.hero__preview h4{ margin:0 0 8px 0; font-size:1rem; color:var(--text); }
+.preview-track{ display:flex; gap:10px; align-items:center; margin-bottom:10px; }
+.preview-track img{ width:48px; height:48px; border-radius:8px; object-fit:cover; }
+
 
 /* Default buttons */
 .stButton button{
@@ -86,6 +160,7 @@ section[data-testid="stSidebar"] div.stButton > button{
 .badge{ display:inline-flex; align-items:center; gap:.35rem; border:var(--border); color:var(--muted);
         padding:.30rem .55rem; border-radius:999px; font-size:.85rem; background:linear-gradient(180deg,#151924,#0f1115); }
 
+/* Cards grid */
 .grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:1.1rem; margin-top:.6rem; }
 .card{ border:var(--border); background:var(--card); border-radius:16px; overflow:hidden; transition:transform .08s, box-shadow .08s; }
 .card:hover{ transform:translateY(-2px); box-shadow:0 10px 30px rgba(0,0,0,.35); }
@@ -96,10 +171,29 @@ section[data-testid="stSidebar"] div.stButton > button{
 .footer{ color:var(--muted); font-size:13px; text-align:center; padding:16px 0 6px; opacity:.9; }
 
 /* profile pill */
-.profile-card{ display:flex; align-items:center; gap:.6rem; padding:.5rem .6rem; border-radius:999px; border:var(--border); background:linear-gradient(180deg,#141821,#0f1115); }
-.profile-card img{ width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid rgba(255,255,255,.15); }
-.profile-card .name{ font-weight:700; color:var(--text); }
-.profile-card .meta{ font-size:.8rem; color:var(--muted); margin-top:-2px; }
+.profile-pill { display:flex; align-items:center; gap:10px; font-weight:600; color:var(--text-color); }
+.profile-pill img { width:40px; height:40px; border-radius:50%; object-fit:cover; }
+.profile-pill .meta { display:flex; flex-direction:column; line-height:1; }
+.profile-pill .meta .name { font-size:0.95rem; }
+.profile-pill .meta .email { font-size:0.8rem; opacity:0.75; }
+
+/* Shorter Connect button  */
+      .connect-link {
+        background: #1DB954;
+        color: #fff;
+        padding: 6px 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight:700;
+        display:inline-block;
+        min-width:110px;
+        text-align:center;
+      }
+/* Responsive */
+@media (max-width:900px){
+  .hero{ flex-direction:column; padding:18px; gap:14px; }
+  .hero__preview{ width:100%; min-width:auto; }
+      }
 </style>
 """,
     unsafe_allow_html=True,
@@ -124,74 +218,81 @@ if "bootstrapped" not in st.session_state:
 
 
 # -----------------------------
-# OAuth helpers (browser ↔ backend)
+#  Browser helper: if user just came back from Spotify,
+#    hydrate token/profile from backend cookie via /spotify/session/me
+#    and drop them into the URL query (so Streamlit can read them).
 # -----------------------------
-def _inject_fetch_session():
-    components.html(f"""
-<html><body>
+components.html(f"""
 <script>
 (async () => {{
-  try {{
-    const resp = await fetch('{API_BASE}/spotify/session/me', {{
-      credentials: 'include',
-      headers: {{ 'Accept':'application/json' }}
-    }});
-    if (!resp.ok) {{
-      // if unauthorized, clear any stale params and leave (sidebar will show Connect)
-      const qp = new URLSearchParams(window.location.search);
-      ["spotify_token","sp_name","sp_email","sp_avatar"].forEach(k => qp.delete(k));
-      history.replaceState(null, '', window.location.pathname + (qp.toString() ? ('?' + qp.toString()) : ''));
-      return;
+  // Helper: force Streamlit rerun by changing the real URL (not only history API)
+  const navigate = (url) => {{
+    try {{
+      window.location.replace(url);   // causes a real navigation → Streamlit reruns
+    }} catch (_) {{
+      window.location.href = url;
     }}
-    const data = await resp.json();
+  }};
 
-    const token = data.access_token || '';
+  // 1) If we were just redirected back with ?sid=..., use it directly (cookie-less fallback)
+  const url = new URL(window.location.href);
+  const sid = url.searchParams.get("sid");
+
+  if (sid) {{
+    try {{
+      const r = await fetch("{API_BASE}/spotify/session/by_sid?sid=" + encodeURIComponent(sid), {{
+        credentials: "include",
+        headers: {{ "Accept":"application/json" }}
+      }});
+      if (r.ok) {{
+        const data = await r.json();
+        const qp = new URLSearchParams(url.search);
+        qp.delete("sid"); // scrub sid from URL once ingested
+        if (data.access_token) {{
+          qp.set("spotify_token", data.access_token);
+        }}
+        const prof = data.profile || {{}};
+        if (prof.display_name) qp.set("sp_name", encodeURIComponent(prof.display_name));
+        if (prof.email)        qp.set("sp_email", encodeURIComponent(prof.email));
+        const avatar = (prof.images && prof.images[0] && prof.images[0].url) || "";
+        if (avatar) qp.set("sp_avatar", encodeURIComponent(avatar));
+        navigate(window.location.pathname + "?" + qp.toString());
+        return; // done
+      }}
+    }} catch (e) {{
+      console.warn("by_sid failed", e);
+      // fall through to cookie flow
+    }}
+  }}
+
+  // 2) Normal cookie-based flow: ask backend to read the sid cookie and hand us a fresh token
+  try {{
+    const resp = await fetch("{API_BASE}/spotify/session/me", {{
+      credentials: "include",
+      headers: {{ "Accept": "application/json" }}
+    }});
+    if (!resp.ok) return;
+
+    const data = await resp.json();
+    const token = data.access_token || "";
     const prof  = data.profile || {{}};
-    const name  = encodeURIComponent(prof.display_name || '');
-    const email = encodeURIComponent(prof.email || '');
-    const avatar= encodeURIComponent((prof.images && prof.images[0] && prof.images[0].url) || '');
+    if (!token) return;
 
     const qp = new URLSearchParams(window.location.search);
-    if (token) qp.set('spotify_token', token);
-    if (name)  qp.set('sp_name', name);
-    if (email) qp.set('sp_email', email);
-    if (avatar)qp.set('sp_avatar', avatar);
+    qp.set("spotify_token", token);
+    if (prof.display_name) qp.set("sp_name", encodeURIComponent(prof.display_name));
+    if (prof.email)        qp.set("sp_email", encodeURIComponent(prof.email));
+    const avatar = (prof.images && prof.images[0] && prof.images[0].url) || "";
+    if (avatar) qp.set("sp_avatar", encodeURIComponent(avatar));
 
-    history.replaceState(null, '', window.location.pathname + (qp.toString() ? ('?' + qp.toString()) : ''));
+    // IMPORTANT: real navigation (not history.replaceState) so Streamlit reruns
+    navigate(window.location.pathname + "?" + qp.toString());
   }} catch (e) {{
-    console.error('session/me failed', e);
+    console.warn("session/me failed", e);
   }}
 }})();
 </script>
-</body></html>
 """, height=0)
-    
-_inject_fetch_session()
-
-
-def _session_watchdog():
-    components.html(f"""
-<html><body>
-<script>
-(async () => {{
-  try {{
-    const resp = await fetch('{API_BASE}/spotify/session/me', {{
-      credentials: 'include',
-      headers: {{ 'Accept':'application/json' }}
-    }});
-    if (resp.status === 401) {{
-      // lost session → send user back to login page
-      window.location.replace('{FRONTEND_URL}/pages/00_Landing.html');
-    }}
-  }} catch (e) {{
-    // network/other: ignore
-  }}
-}})();
-</script>
-</body></html>
-""", height=0)
-
-_session_watchdog()
 
 
 
@@ -211,22 +312,132 @@ def _clear_qp(keys: List[str]):
     </body></html>
     """, height=0)
 
- 
 
-# Ingest token/profile from query params → session_state
+# -----------------------------
+# Ingest token/profile from URL → session_state, then scrub URL
+# -----------------------------
+
 qp = st.query_params
-tok = qp.get("spotify_token")
-if isinstance(tok, str) and tok:
-    st.session_state.spotify_access_token = tok
-    # profile (optional)
-    prof = {
+token = qp.get("spotify_token")
+if isinstance(token, str) and token:
+    st.session_state.spotify_access_token = token
+    st.session_state.spotify_profile = {
         "display_name": qp.get("sp_name") or "",
         "email": qp.get("sp_email") or "",
         "avatar_url": qp.get("sp_avatar") or "",
     }
-    st.session_state.spotify_profile = prof
-    # scrub url
-    _clear_qp(["spotify_token", "sp_name", "sp_email", "sp_avatar"])
+    components.html("""
+    <script>
+      const qp = new URLSearchParams(window.location.search);
+      ["spotify_token","sp_name","sp_email","sp_avatar","sid","fetch_session"].forEach(k => qp.delete(k));
+      history.replaceState(null, "", window.location.pathname + (qp.toString()?("?"+qp.toString()):""));
+    </script>
+    """, height=0)
+
+# -----------------------------
+# LOGIN PANE (early return gate)
+#    If no token yet, show a tiny login panel and stop rendering.
+# -----------------------------
+if not st.session_state.get("spotify_access_token"):
+    
+    login_url = f"{API_BASE}/spotify/login"
+     # Friendly landing hero for the login/guest choice
+    st.markdown(
+            f"""
+<div style="max-width:980px;margin:28px auto;padding:28px;border-radius:18px;
+            background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+            box-shadow:0 18px 40px rgba(0,0,0,0.6); display:flex; gap:20px; align-items:center;">
+  <div style="flex:1;">
+    <h2 style="margin:0 0 8px;color:#ecf1f8;font-size:1.6rem;">Welcome to Music Recommendation AI</h2>
+    <p style="margin:0 0 14px;color:#9aa4b2;font-size:1rem;line-height:1.4;">
+      Tell us your vibe and we'll craft a playlist for the moment. Connect Spotify for the best experience —
+      or continue as a guest with local saves and limited recommendations.
+    </p>
+    <div style="display:flex;gap:12px;align-items:center;">
+      <a href="{login_url}" style="background:#1DB954;color:#000;padding:12px 18px;border-radius:12px;font-weight:800;
+         text-decoration:none;display:inline-block;">🎧 Connect Spotify</a>
+      <button id="guest_continue" style="background:transparent;border:1px solid rgba(255,255,255,0.06);
+         color:#9aa4b2;padding:10px 14px;border-radius:10px;font-weight:700;">Continue without Spotify</button>
+    </div>
+    <p style="margin-top:12px;color:#7f8b95;font-size:.92rem;">Tip: connecting enables saved playlists to be associated with your account and richer personalized picks.</p>
+  </div>
+  <div style="width:220px;min-width:160px;">
+    <img alt="music illustration" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=800&auto=format&fit=crop&s=1a8b7f2f6e4a5d1a2b3c4d5e6f7g8h9i"
+         style="width:100%;border-radius:12px;object-fit:cover;display:block;" />
+  </div>
+</div>
+""",
+            unsafe_allow_html=True,
+    )
+    st.stop()
+
+# -----------------------------
+# OAuth helpers (browser ↔ backend)
+# -----------------------------
+# def _inject_fetch_session():
+#     components.html(f"""
+# <html><body>
+# <script>
+# (async () => {{
+#   try {{
+#     const resp = await fetch('{API_BASE}/spotify/session/me', {{
+#       credentials: 'include',
+#       headers: {{ 'Accept':'application/json' }}
+#     }});
+#     if (!resp.ok) {{
+#       // if unauthorized, clear any stale params and leave (sidebar will show Connect)
+#       const qp = new URLSearchParams(window.location.search);
+#       ["spotify_token","sp_name","sp_email","sp_avatar"].forEach(k => qp.delete(k));
+#       history.replaceState(null, '', window.location.pathname + (qp.toString() ? ('?' + qp.toString()) : ''));
+#       return;
+#     }}
+#     const data = await resp.json();
+
+#     const token = data.access_token || '';
+#     const prof  = data.profile || {{}};
+#     const name  = encodeURIComponent(prof.display_name || '');
+#     const email = encodeURIComponent(prof.email || '');
+#     const avatar= encodeURIComponent((prof.images && prof.images[0] && prof.images[0].url) || '');
+
+#     const qp = new URLSearchParams(window.location.search);
+#     if (token) qp.set('spotify_token', token);
+#     if (name)  qp.set('sp_name', name);
+#     if (email) qp.set('sp_email', email);
+#     if (avatar)qp.set('sp_avatar', avatar);
+
+#     history.replaceState(null, '', window.location.pathname + (qp.toString() ? ('?' + qp.toString()) : ''));
+#   }} catch (e) {{
+#     console.error('session/me failed', e);
+#   }}
+# }})();
+# </script>
+# </body></html>
+# """, height=0)
+    
+# _inject_fetch_session()
+
+
+# def _session_watchdog():
+#     components.html(f"""
+# <html><body><script>
+# (async () => {{
+#   try {{
+#     const resp = await fetch('{API_BASE}/spotify/session/me', {{
+#       credentials: 'include',
+#       headers: {{ 'Accept':'application/json' }}
+#     }});
+#     if (resp.status === 401) {{
+#       window.location.replace('{FRONTEND_URL}/00_landing');
+#     }}
+#   }} catch (e) {{}}
+# }})();
+# </script></body></html>
+# """, height=0)
+
+
+# _session_watchdog()
+
+
 
 
 
@@ -237,55 +448,93 @@ with st.sidebar:
     prof = st.session_state.spotify_profile
     token = st.session_state.spotify_access_token
 
+# profile pill
+    _profile = st.session_state.get("spotify_profile") or {}
+    _sp_name = ""
+    _sp_email = ""
+    _sp_img = ""
 
-    if not token:
-        st.sidebar.warning("🔒 You’re not connected to Spotify. Some features may be limited.")
-        if st.sidebar.button("🎧 Connect Spotify"):
-            try:
-                st.switch_page("pages/00_landing.py")
-            except Exception:
-                st.stop()
+    if isinstance(_profile, dict):
+        _sp_name = _profile.get("display_name") or _profile.get("name") or ""
+        _sp_email = _profile.get("email") or _profile.get("sp_email") or ""
+        # Spotify "images" is a list of dicts like [{"url": "..."}]
+        imgs = _profile.get("images") or []
+        if isinstance(imgs, list) and len(imgs) > 0 and isinstance(imgs[0], dict):
+            _sp_img = imgs[0].get("url") or ""
+        # fallback fields if your app stored a profile image under a different key:
+        _sp_img = _sp_img or _profile.get("avatar_url") or _profile.get("profile_img") or _profile.get("avatar") or _profile.get("picture") or ""
 
-    # Profile pill
-    avatar = (prof or {}).get("avatar_url") or "https://avatars.githubusercontent.com/u/1?v=4"
-    name = (prof or {}).get("display_name") or (prof or {}).get("email") or "Spotify user"
-    sid = (prof or {}).get("email") or "connected"
-    st.markdown(
-        f"""
-<div class="profile-card">
-  <img src="{avatar}" alt="avatar" />
-  <div>
-    <div class="name">{name}</div>
-    <div class="meta">{sid}</div>
-  </div>
-</div>
-""",
-        unsafe_allow_html=True,
-    )
-    col_logout, col_refresh = st.columns([1,1])
+    # Render: if logged-in show profile pill; otherwise show a compact Connect button
+    if _sp_name or _sp_img:
+    # only include the <img> tag when we actually have an image URL;
+    # use inline styles to guarantee size + object-fit even if CSS class isn't applied.
+        img_html = (
+            f'<img src="{_sp_img}" alt="profile image" '
+            f'style="width:40px;height:40px;border-radius:50%;object-fit:cover;display:block;"/>'
+            if _sp_img else ""
+        )
+        st.markdown(
+            f"""
+            <div class="profile-pill" role="group" aria-label="user profile">
+            {img_html}
+            <div class="meta">
+                <div class="name">{_sp_name or 'Spotify user'}</div>
+                <div class="email">{_sp_email or ''}</div>
+            </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        # shorter connect button (anchor -> opens FastAPI /spotify/login)
+        login_url = f"{API_BASE}/spotify/login"
+        st.markdown(f'<a class="connect-link" href="{login_url}">Connect Spotify</a>', unsafe_allow_html=True)
+
+
+
+    st.markdown("---")
+
+    
+    cols_lr = st.columns([1,1])
+    col_logout = cols_lr[0]
+    col_refresh = cols_lr[1]
     with col_logout:
         if st.button("Log out"):
-            # backend logout (clear cookie) via browser (credentials include)
             components.html(f"""
-            <html><body><script>
-            (async()=>{{
-            try {{
-                await fetch('{API_BASE}/spotify/logout', {{method:'POST', credentials:'include'}});
-            }}catch(e){{}}
-            location.replace('{FRONTEND_URL}');
-            }})();
-            </script></body></html>
-            """, height=0)
+        <script>
+        (async () => {{
+          try {{
+            await fetch("{API_BASE}/spotify/logout", {{
+              method: "POST",
+              credentials: "include",
+              headers: {{ "Accept":"application/json" }}
+            }});
+          }} catch (e) {{
+            console.warn("Logout request failed", e);
+          }}
+          // Ensure we remove sensitive query params and force a real navigation
+          const qp = new URLSearchParams(window.location.search);
+          ["spotify_token","sp_name","sp_email","sp_avatar","sid","fetch_session"].forEach(k => qp.delete(k));
+          // small delay to allow server to clear cookie
+          setTimeout(() => {{
+            window.location.replace(window.location.pathname + (qp.toString()?("?"+qp.toString()):""));
+          }}, 250);
+        }})();
+        </script>
+        """, height=0)
+            # Clear client-side session state immediately as a best-effort
+            st.session_state.spotify_access_token = None
+            st.session_state.spotify_profile = None
             st.stop()
     with col_refresh:
         if st.button("Refresh token"):
-            # ask browser to refetch /session/me to rotate access token if needed
-            components.html(f"""
-            <html><body><script>
-            const qp = new URLSearchParams(window.location.search);
-            qp.set('fetch_session','1');
-            location.replace(window.location.pathname + '?' + qp.toString());
-            </script></body></html>
+            components.html("""
+            <script>
+              // force the session-me hydrator to run again on next rerun
+              const qp = new URLSearchParams(window.location.search);
+              qp.set("fetch_session", "1");
+              location.replace(window.location.pathname + "?" + qp.toString());
+            </script>
             """, height=0)
             st.stop()
 

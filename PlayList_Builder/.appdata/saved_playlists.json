@@ -677,5 +677,344 @@
       }
     ],
     "user": null
+  },
+  {
+    "id": "20251022-193438-882591",
+    "title": "romantic · relax · classic",
+    "created_at": "2025-10-22T19:34:38",
+    "request": {
+      "vibe_description": "morning jog, uplifting pop, fresh vibes",
+      "mood": "romantic",
+      "activity": "relax",
+      "genre_or_language": "classic",
+      "exclude_explicit": false,
+      "limit": 12
+    },
+    "description": "A romantic playlist tailored for relax. Smooth flow and consistent vibe curated from the selected tracks.",
+    "tracks": [
+      {
+        "id": "1DfGPEHxTYeaJpiNA4xUb5",
+        "name": "Für Elise",
+        "artists": [
+          "Ludwig van Beethoven"
+        ],
+        "album": "Classical Best Of",
+        "spotify_url": "https://open.spotify.com/track/1DfGPEHxTYeaJpiNA4xUb5",
+        "preview_url": null,
+        "score": 0.07197608470848522,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "6zeE5tKyr8Nu882DQhhSQI",
+        "name": "Dust in the Wind",
+        "artists": [
+          "Kansas"
+        ],
+        "album": "Point Of Know Return (Expanded Edition)",
+        "spotify_url": "https://open.spotify.com/track/6zeE5tKyr8Nu882DQhhSQI",
+        "preview_url": null,
+        "score": 0.05997435950009109,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "05uGBKRCuePsf43Hfm0JwX",
+        "name": "Brain Damage",
+        "artists": [
+          "Pink Floyd"
+        ],
+        "album": "The Dark Side of the Moon",
+        "spotify_url": "https://open.spotify.com/track/05uGBKRCuePsf43Hfm0JwX",
+        "preview_url": null,
+        "score": 0.05812087227836036,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "4yugZvBYaoREkJKtbG08Qr",
+        "name": "Take It Easy - 2013 Remaster",
+        "artists": [
+          "Eagles"
+        ],
+        "album": "Eagles (2013 Remaster)",
+        "spotify_url": "https://open.spotify.com/track/4yugZvBYaoREkJKtbG08Qr",
+        "preview_url": null,
+        "score": 0.05765801418717341,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "2ml1speWnxzdmgFHyJMVWp",
+        "name": "Bach, JS: Keyboard Partita No. 2 in C Minor, BWV 826: V. Rondeau",
+        "artists": [
+          "Johann Sebastian Bach",
+          "Piotr Anderszewski"
+        ],
+        "album": "Relaxing Piano",
+        "spotify_url": "https://open.spotify.com/track/2ml1speWnxzdmgFHyJMVWp",
+        "preview_url": null,
+        "score": 0.05407880326240542,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "6SJn3SeeUoQkUzjdHSs6GN",
+        "name": "Sӕverud: Suite No. 1 from Peer Gynt, Op. 28 No. 1: Hymn Against the Bøyg (Excerpt)",
+        "artists": [
+          "Harald Sæverud",
+          "Leif Ove Andsnes"
+        ],
+        "album": "Relaxing Piano",
+        "spotify_url": "https://open.spotify.com/track/6SJn3SeeUoQkUzjdHSs6GN",
+        "preview_url": null,
+        "score": 0.05385475197730513,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "4ecc8VUXKBzWQtOQsh6ShR",
+        "name": "Chopin: Nocturne No. 18 in E Major, Op. 62 No. 2",
+        "artists": [
+          "Frédéric Chopin",
+          "David Fray"
+        ],
+        "album": "Relaxing Piano",
+        "spotify_url": "https://open.spotify.com/track/4ecc8VUXKBzWQtOQsh6ShR",
+        "preview_url": null,
+        "score": 0.053744523487388916,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "5dWVX1qkD7R1K9Wppiwip8",
+        "name": "Bartók: 14 Bagatelles, Op. 6, Sz. 38: No. 3, Andante",
+        "artists": [
+          "Béla Bartók",
+          "Piotr Anderszewski"
+        ],
+        "album": "Relaxing Piano",
+        "spotify_url": "https://open.spotify.com/track/5dWVX1qkD7R1K9Wppiwip8",
+        "preview_url": null,
+        "score": 0.05344704981741038,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "318fzfqQ5VhEipmnZKJAc1",
+        "name": "Satie: 3 Gymnopédies: No. 1, Lent et douloureux",
+        "artists": [
+          "Erik Satie",
+          "Bertrand Chamayou"
+        ],
+        "album": "Relaxing Piano",
+        "spotify_url": "https://open.spotify.com/track/318fzfqQ5VhEipmnZKJAc1",
+        "preview_url": null,
+        "score": 0.05307035829327583,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "3ff8HZTCy9I8rtR9QaJ2HB",
+        "name": "Chopin: 24 Preludes, Op. 28: No. 3 in G Major",
+        "artists": [
+          "Frédéric Chopin",
+          "Nikolai Lugansky"
+        ],
+        "album": "Relaxing Piano",
+        "spotify_url": "https://open.spotify.com/track/3ff8HZTCy9I8rtR9QaJ2HB",
+        "preview_url": null,
+        "score": 0.05046154108008225,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "7F8VHC3DuKsdgKUFrED6t8",
+        "name": "Smetana: Bagatelles et impromptus: No. 7, L'amour",
+        "artists": [
+          "Bedřich Smetana",
+          "Georges Pludermacher"
+        ],
+        "album": "Relaxing Piano",
+        "spotify_url": "https://open.spotify.com/track/7F8VHC3DuKsdgKUFrED6t8",
+        "preview_url": null,
+        "score": 0.05032245149889974,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "5dNbhUvumsqu051JgEhcBQ",
+        "name": "Berio: 6 Encores: No. 1, Brin",
+        "artists": [
+          "Luciano Berio",
+          "Georges Pludermacher"
+        ],
+        "album": "Relaxing Piano",
+        "spotify_url": "https://open.spotify.com/track/5dNbhUvumsqu051JgEhcBQ",
+        "preview_url": null,
+        "score": 0.04904226406568322,
+        "reason": "features unavailable"
+      }
+    ],
+    "user": null
+  },
+  {
+    "id": "20251022-203652-92bb3a",
+    "title": "romantic · party · classic",
+    "created_at": "2025-10-22T20:36:52",
+    "request": {
+      "vibe_description": "romantic dinner, calm acoustic, soft guitar",
+      "mood": "romantic",
+      "activity": "party",
+      "genre_or_language": "classic",
+      "exclude_explicit": false,
+      "limit": 12
+    },
+    "description": "A romantic playlist tailored for party. Smooth flow and consistent vibe curated from the selected tracks.",
+    "tracks": [
+      {
+        "id": "1dyMa8w9CzgD4JctzaDJds",
+        "name": "Soft Bossa Nova for a Romantic Night",
+        "artists": [
+          "Background Sounds",
+          "Restaurant Background Music",
+          "Dinner Jazz"
+        ],
+        "album": "Elegant Restaurant Background Music Relaxing Jazz & Ambient Dining Music",
+        "spotify_url": "https://open.spotify.com/track/1dyMa8w9CzgD4JctzaDJds",
+        "preview_url": null,
+        "score": 0.10956662867620529,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "3NqaVIifKRn4JRvhdf9Ztw",
+        "name": "Piano Dinner Music",
+        "artists": [
+          "Paris Restaurant Piano Music Masters",
+          "Solo Piano",
+          "Romantic Piano Ambient",
+          "Deep Relaxing Piano"
+        ],
+        "album": "Still Chords: Soft Piano Background",
+        "spotify_url": "https://open.spotify.com/track/3NqaVIifKRn4JRvhdf9Ztw",
+        "preview_url": null,
+        "score": 0.10364896251688603,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "15qC8BKWWTZanYxtzNx4xs",
+        "name": "Relaxing Acoustic Guitar for Dinner",
+        "artists": [
+          "Background Sounds",
+          "Restaurant Background Music",
+          "Dinner Jazz"
+        ],
+        "album": "Elegant Restaurant Background Music Relaxing Jazz & Ambient Dining Music",
+        "spotify_url": "https://open.spotify.com/track/15qC8BKWWTZanYxtzNx4xs",
+        "preview_url": null,
+        "score": 0.10304993492539133,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "33VT3v15FZapBd74riQ1yP",
+        "name": "Slow Tempo Jazz for Romantic Dining",
+        "artists": [
+          "Background Sounds",
+          "Restaurant Background Music",
+          "Dinner Jazz"
+        ],
+        "album": "Elegant Restaurant Background Music Relaxing Jazz & Ambient Dining Music",
+        "spotify_url": "https://open.spotify.com/track/33VT3v15FZapBd74riQ1yP",
+        "preview_url": null,
+        "score": 0.08762596400777112,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "41PKSMACRBoZ8OciLLGWhA",
+        "name": "Classic Noble",
+        "artists": [
+          "Classical Sundays"
+        ],
+        "album": "Sunday Morning Classical",
+        "spotify_url": "https://open.spotify.com/track/41PKSMACRBoZ8OciLLGWhA",
+        "preview_url": null,
+        "score": 0.07392953963715429,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "0fvLto2jDbf1ronNae36B5",
+        "name": "Gentle Romance",
+        "artists": [
+          "Dinner Music Ensemble"
+        ],
+        "album": "The Best of Dinner Music",
+        "spotify_url": "https://open.spotify.com/track/0fvLto2jDbf1ronNae36B5",
+        "preview_url": null,
+        "score": 0.06222398507167564,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "1ymzdmQYjO3ThdlToYZnTq",
+        "name": "Adieux",
+        "artists": [
+          "Ludovico Einaudi"
+        ],
+        "album": "Adieux",
+        "spotify_url": "https://open.spotify.com/track/1ymzdmQYjO3ThdlToYZnTq",
+        "preview_url": null,
+        "score": 0.058892369143045374,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "4pbJqGIASGPr0ZpGpnWkDn",
+        "name": "We Will Rock You - Remastered 2011",
+        "artists": [
+          "Queen"
+        ],
+        "album": "News Of The World (2011 Remaster)",
+        "spotify_url": "https://open.spotify.com/track/4pbJqGIASGPr0ZpGpnWkDn",
+        "preview_url": null,
+        "score": 0.05847620037020968,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "20OFwXhEXf12DzwXmaV7fj",
+        "name": "Bad Moon Rising",
+        "artists": [
+          "Creedence Clearwater Revival"
+        ],
+        "album": "Green River (Expanded Edition)",
+        "spotify_url": "https://open.spotify.com/track/20OFwXhEXf12DzwXmaV7fj",
+        "preview_url": null,
+        "score": 0.052747813152544586,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "3QxKpdTB8ZSFn8MGeCCpsQ",
+        "name": "Crazy",
+        "artists": [
+          "Aerosmith"
+        ],
+        "album": "Get A Grip",
+        "spotify_url": "https://open.spotify.com/track/3QxKpdTB8ZSFn8MGeCCpsQ",
+        "preview_url": null,
+        "score": 0.05180590079296418,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "3weNRklVDqb4Rr5MhKBR3D",
+        "name": "Nuvole Bianche",
+        "artists": [
+          "Ludovico Einaudi"
+        ],
+        "album": "Una Mattina",
+        "spotify_url": "https://open.spotify.com/track/3weNRklVDqb4Rr5MhKBR3D",
+        "preview_url": null,
+        "score": 0.050422110564452866,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "2PzU4IB8Dr6mxV3lHuaG34",
+        "name": "(I Can't Get No) Satisfaction - Mono",
+        "artists": [
+          "The Rolling Stones"
+        ],
+        "album": "Out Of Our Heads",
+        "spotify_url": "https://open.spotify.com/track/2PzU4IB8Dr6mxV3lHuaG34",
+        "preview_url": null,
+        "score": 0.04991392620016493,
+        "reason": "features unavailable"
+      }
+    ],
+    "user": null
   }
 ]

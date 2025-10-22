@@ -1,4 +1,4 @@
-# pages/00_Landing.py
+# pages/00_landing.py
 import os, streamlit as st
 from dotenv import load_dotenv
 import streamlit.components.v1 as components
@@ -28,7 +28,6 @@ def inject_fetch_session():
 <html><body><script>
 (async () => {{
   try {{
-    // Try to fetch session if cookie exists (after OAuth)
     const resp = await fetch('{API_BASE}/spotify/session/me', {{
       credentials: 'include',
       headers: {{ 'Accept':'application/json' }}
@@ -39,13 +38,14 @@ def inject_fetch_session():
     const prof  = data.profile || {{}};
 
     if (token) {{
-      const qp = new URLSearchParams(window.location.search);
+      const qp = new URLSearchParams();
       qp.set('spotify_token', token);
-      qp.set('sp_name', encodeURIComponent(prof.display_name || ''));
-      qp.set('sp_email', encodeURIComponent(prof.email || ''));
+      if (prof.display_name) qp.set('sp_name', encodeURIComponent(prof.display_name));
+      if (prof.email)        qp.set('sp_email', encodeURIComponent(prof.email));
       const avatar = (prof.images && prof.images[0] && prof.images[0].url) || '';
       if (avatar) qp.set('sp_avatar', encodeURIComponent(avatar));
-      // Redirect to home page (main app) with query params
+
+      // IMPORTANT: always send users to the main app root (served by streamlit_app.py)
       window.location.replace('{FRONTEND_URL}/?' + qp.toString());
     }}
   }} catch (e) {{

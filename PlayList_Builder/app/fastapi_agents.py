@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional, List, Dict, Any, Callable
 import os, json, httpx
 import secrets, time
+from urllib.parse import quote_plus
 from fastapi import FastAPI, HTTPException, Header, Depends, APIRouter, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
@@ -91,16 +92,33 @@ async def spotify_callback(code: Optional[str] = None, state: Optional[str] = No
         profile = await fetch_spotify_me(tokens["access_token"])
         sid = create_session(tokens, profile)
 
-        # set a secure HTTP-only cookie; then redirect back to UI
-        resp = RedirectResponse(url=f"{FRONTEND_URL}/?sid={sid}")
-        resp.set_cookie(  # optional: keep cookie for browser-only calls
-            key="sid",
-            value=sid,
-            httponly=True,
-            secure=False,   # True in production (HTTPS)
-            samesite="lax",
-            max_age=30*24*3600
+        # set a secure HTTP-only cookie; then redirect back to UI\
+        resp = RedirectResponse(url=f"{FRONTEND_URL}/?sid={sid}&fetch_session=1")
+
+        # DEV: include token & profile in redirect so Streamlit can pick it up immediately
+        token_q = tokens.get("access_token", "")
+        prof = profile or {}
+        avatar = ""
+        imgs = prof.get("images") or []
+        if isinstance(imgs, list) and len(imgs) > 0 and isinstance(imgs[0], dict):
+            avatar = imgs[0].get("url") or ""
+        qp = (
+            f"?sid={sid}&fetch_session=1"
+            + (f"&spotify_token={token_q}" if token_q else "")
+            + (f"&sp_name={quote_plus(prof.get('display_name',''))}" if prof.get("display_name") else "")
+            + (f"&sp_email={quote_plus(prof.get('email',''))}" if prof.get("email") else "")
+            + (f"&sp_avatar={quote_plus(avatar)}" if avatar else "")
         )
+        resp = RedirectResponse(url=f"{FRONTEND_URL}/{qp}")
+
+        resp.set_cookie(  # optional: keep cookie for browser-only calls
+             key="sid",
+             value=sid,
+             httponly=True,
+             secure=False,   # True in production (HTTPS)
+             samesite="lax",
+             max_age=30*24*3600
+         )
         return resp
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
