@@ -145,7 +145,7 @@ def switch_to_playlist(mood_label: Optional[str]):
     # Try to programmatically switch pages (Streamlit ≥1.27)
     for target in ("pages/streamlit_app.py", "streamlit_app.py"):
         try:
-            # st.switch_page(target)
+            st.switch_page(target)
             return
         except Exception:
             continue
@@ -171,7 +171,7 @@ with st.form("mood_text_rg", clear_on_submit=False):
     # LEFT: Free text
     with st.container():
         st.markdown('<div class="panel">', unsafe_allow_html=True)
-        st.markdown('<h3>How do you feel?</h3><div class="hint">Free text (optional)</div>', unsafe_allow_html=True)
+        st.markdown('<h3>How do you feel?</h3><div class="hint">Free text </div>', unsafe_allow_html=True)
         txt = st.text_area(
             "In your own words, how do you feel right now?",
             value=st.session_state.get("vibe_prefill", ""),

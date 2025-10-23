@@ -163,5 +163,177 @@
         "reason": "features unavailable"
       }
     ]
+  },
+  {
+    "id": "20251023-145238-443e2b",
+    "title": "sadness · study · Acoustic",
+    "created_at": "2025-10-23T14:52:38",
+    "request": {
+      "vibe_description": "i feel gloomy and tired",
+      "mood": "sadness",
+      "activity": "study",
+      "genre_or_language": "Acoustic",
+      "exclude_explicit": false,
+      "limit": 5
+    },
+    "description": "A sadness playlist tailored for study. Smooth flow and consistent vibe curated from the selected tracks.",
+    "tracks": [
+      {
+        "id": "2qF9XblQ3kubVDUidSO6W9",
+        "name": "Feel",
+        "artists": [
+          "Magic Juice",
+          "DJ Goja",
+          "Andrada"
+        ],
+        "album": "Feel",
+        "spotify_url": "https://open.spotify.com/track/2qF9XblQ3kubVDUidSO6W9",
+        "preview_url": null,
+        "score": 0.19741583590482475,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "6CzMKOYzhBXzZszsy4yFIG",
+        "name": "Feels",
+        "artists": [
+          "AP Dhillon",
+          "Gurinder Gill",
+          "Gminxr"
+        ],
+        "album": "Feels",
+        "spotify_url": "https://open.spotify.com/track/6CzMKOYzhBXzZszsy4yFIG",
+        "preview_url": null,
+        "score": 0.15444407218431727,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "6gf5WNqbCZvNktbCtWhS9t",
+        "name": "Feel",
+        "artists": [
+          "Vishu Puthi"
+        ],
+        "album": "Feel",
+        "spotify_url": "https://open.spotify.com/track/6gf5WNqbCZvNktbCtWhS9t",
+        "preview_url": null,
+        "score": 0.15319792795167558,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "5GXAXm5YOmYT0kL5jHvYBt",
+        "name": "I Feel It Coming",
+        "artists": [
+          "The Weeknd",
+          "Daft Punk"
+        ],
+        "album": "Starboy",
+        "spotify_url": "https://open.spotify.com/track/5GXAXm5YOmYT0kL5jHvYBt",
+        "preview_url": null,
+        "score": 0.15155465398570178,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "0iGuzOfAKXYFKipSfm9peU",
+        "name": "Feel",
+        "artists": [
+          "Tarsem Jassar",
+          "Wazir Patar"
+        ],
+        "album": "Enigma",
+        "spotify_url": "https://open.spotify.com/track/0iGuzOfAKXYFKipSfm9peU",
+        "preview_url": null,
+        "score": 0.15124723549493438,
+        "reason": "features unavailable"
+      }
+    ]
+  },
+  {
+    "id": "20251023-145936-427855",
+    "title": "calm · study · Pop",
+    "created_at": "2025-10-23T14:59:36",
+    "request": {
+      "vibe_description": "calm and peaceful day",
+      "mood": "calm",
+      "activity": "study",
+      "genre_or_language": "Pop",
+      "exclude_explicit": false,
+      "limit": 5
+    },
+    "description": "A calm playlist tailored for study. Smooth flow and consistent vibe curated from the selected tracks.",
+    "tracks": [
+      {
+        "id": "1I37Zz2g3hk9eWxaNkj031",
+        "name": "Your Idol",
+        "artists": [
+          "Saja Boys",
+          "Andrew Choi",
+          "Neckwav",
+          "Danny Chung",
+          "KEVIN WOO",
+          "samUIL Lee",
+          "KPop Demon Hunters Cast"
+        ],
+        "album": "KPop Demon Hunters (Soundtrack from the Netflix Film)",
+        "spotify_url": "https://open.spotify.com/track/1I37Zz2g3hk9eWxaNkj031",
+        "preview_url": null,
+        "score": 0.1542105454210713,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "5DxDLsW6PsLz5gkwC7Mk5S",
+        "name": "Free",
+        "artists": [
+          "Rumi",
+          "Jinu",
+          "EJAE",
+          "Andrew Choi",
+          "KPop Demon Hunters Cast"
+        ],
+        "album": "KPop Demon Hunters (Soundtrack from the Netflix Film)",
+        "spotify_url": "https://open.spotify.com/track/5DxDLsW6PsLz5gkwC7Mk5S",
+        "preview_url": null,
+        "score": 0.15204490790841568,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "1gB3sX2qqn0TzDEWpHKBbR",
+        "name": "Aayega Maza Ab Barsaat Ka (From \"Andaaz\")",
+        "artists": [
+          "Alka Yagnik",
+          "Babul Supriyo",
+          "Nadeem Shravan"
+        ],
+        "album": "Aayega Maza Ab Barsaat Ka (From \"Andaaz\")",
+        "spotify_url": "https://open.spotify.com/track/1gB3sX2qqn0TzDEWpHKBbR",
+        "preview_url": null,
+        "score": 0.10485570333643787,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "0lcmU81gSS6U1hBLGd2pge",
+        "name": "Andru Vanthathum",
+        "artists": [
+          "T. M. Soundararajan",
+          "P. Susheela"
+        ],
+        "album": "Periya Idatthu Penn",
+        "spotify_url": "https://open.spotify.com/track/0lcmU81gSS6U1hBLGd2pge",
+        "preview_url": null,
+        "score": 0.10392615779745297,
+        "reason": "features unavailable"
+      },
+      {
+        "id": "4RqmRMBYfEYsPgNT62DXVr",
+        "name": "Andha Aagayam - Nee Singam Dhan Trending Version",
+        "artists": [
+          "A.R. Rahman",
+          "Sid Sriram"
+        ],
+        "album": "Andha Aagayam (Nee Singam Dhan Trending Version)",
+        "spotify_url": "https://open.spotify.com/track/4RqmRMBYfEYsPgNT62DXVr",
+        "preview_url": null,
+        "score": 0.10220802205803853,
+        "reason": "features unavailable"
+      }
+    ]
   }
 ]

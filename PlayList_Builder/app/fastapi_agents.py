@@ -267,26 +267,38 @@ def api_mood_fuse(inp: FuseInput):
         except Exception:
             rg_final, rg_dist = None, {}
 
-    # --- FUSION LOGIC ----------------------------------------------------------
-    # Priority: RG quiz if present and produced a label; otherwise fall back to TEXT
+    # --- FUSION LOGIC (TEXT PRIORITY) --------------------------------------------
+    # Priority: TEXT if present and valid; quiz only refines or agrees
     final_label, final_conf = text_label, text_conf
     parts: Dict[str, Any] = {"text": text_scores}
+
     if rg_final and isinstance(rg_final, dict):
         rg_label = str(rg_final.get("label", "") or "").strip()
         rg_conf  = float(rg_final.get("confidence", 0.9))
         parts["rg_quiz"] = rg_dist
         parts["rg_quiz_final"] = rg_final
 
-        if rg_label:
-            final_label = rg_label
-            # If both present and agree, boost confidence slightly
-            if has_text and text_label.lower() == rg_label.lower():
-                final_conf = min(1.0, max(rg_conf, text_conf) + 0.05)
-            else:
-                final_conf = max(rg_conf, text_conf)
-    else:
-        # no valid RG outcome → ensure parts still reflect attempt if provided
-        if has_rg:
-            parts["rg_quiz"] = rg_dist  # may be empty
+        if has_text:
+            # Case 1: both present and AGREE → boost confidence
+            if text_label.lower() == rg_label.lower():
+                final_conf = min(1.0, max(text_conf, rg_conf) + 0.1)
 
-    return FuseResponse(mood=final_label, confidence=float(final_conf), parts=parts)
+            # Case 2: both present but DISAGREE → keep TEXT label, blend confidence
+            else:
+                final_conf = (text_conf * 0.7) + (rg_conf * 0.3)
+
+        else:
+            # Case 3: only RG quiz present (no text)
+            final_label = rg_label
+            final_conf  = rg_conf
+
+    else:
+        # RG missing or invalid
+        if has_rg:
+            parts["rg_quiz"] = rg_dist  # even if empty
+
+    return FuseResponse(
+        mood=final_label,
+        confidence=float(final_conf),
+        parts=parts,
+    )
