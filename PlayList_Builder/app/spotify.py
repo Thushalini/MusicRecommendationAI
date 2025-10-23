@@ -4,6 +4,7 @@ import random
 import base64
 import unicodedata
 import requests
+import time
 from dotenv import load_dotenv
 from pathlib import Path
 from typing import Dict, List, Tuple, Set, Optional
@@ -21,7 +22,6 @@ CLIENT_ID = os.getenv("SPOTIPY_CLIENT_ID") or os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIPY_CLIENT_SECRET") or os.getenv("SPOTIFY_CLIENT_SECRET")
 DEFAULT_MARKET = os.getenv("SPOTIFY_MARKET", "IN")
 
-# NEW: prioritized list of markets to try (comma-separated)
 MARKETS_PREF = [
     m.strip().upper()
     for m in (os.getenv("SPOTIFY_MARKETS", "") or "").split(",")
@@ -31,10 +31,19 @@ MARKETS_PREF = [
 if not CLIENT_ID or not CLIENT_SECRET:
     raise ValueError("Spotify API credentials not set. Please check your .env file.")
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # not used here directly
+# ----------------------------
+# Speed / Query Budget Controls
+# ----------------------------
+BUDGET_SECS = float(os.getenv("REC_BUDGET_SECS", "7.0"))
+FILL_STOP_RATIO = float(os.getenv("REC_FILL_STOP_RATIO", "0.5"))
+SEARCH_TRIES = int(os.getenv("REC_SEARCH_TRIES", "2"))
+PLAYLIST_TRIES = int(os.getenv("REC_PLAYLIST_TRIES", "1"))
+MAX_OFFSET_SEARCH = int(os.getenv("REC_MAX_OFFSET_SEARCH", "220"))
+MAX_OFFSET_PL = int(os.getenv("REC_MAX_OFFSET_PL", "120"))
+MAX_VARIANTS = int(os.getenv("REC_MAX_VARIANTS", "6"))
 
 # ----------------------------
-# Resilient HTTP session
+# HTTP session
 # ----------------------------
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -42,8 +51,8 @@ from urllib3.util.retry import Retry
 def _build_session() -> requests.Session:
     session = requests.Session()
     retry = Retry(
-        total=5,
-        backoff_factor=0.6,
+        total=3,
+        backoff_factor=0.25,
         status_forcelist=[429, 500, 502, 503, 504],
         allowed_methods=["GET", "POST"],
         respect_retry_after_header=True,
@@ -94,8 +103,9 @@ def sp_get(url: str, params: dict | None = None) -> dict | None:
 # ----------------------------
 # Helpers
 # ----------------------------
+_WORD_RE = re.compile(r"[A-Za-z0-9\-']+")
+
 def _rand_offset(max_offset: int = 500) -> int:
-    """Random offset for Spotify pagination to vary results each build."""
     return random.randint(0, max_offset)
 
 def _norm(s: str) -> str:
@@ -106,7 +116,9 @@ def tokenize(text: str) -> List[str]:
         return []
     phrases = re.findall(r'"([^"]+)"', text)
     remainder = re.sub(r'"[^"]+"', ' ', text or '')
-    words = re.findall(r"[A-Za-z0-9\-']+", remainder)
+    # support hashtags as tokens
+    remainder = re.sub(r"#", " ", remainder)
+    words = _WORD_RE.findall(remainder)
     toks = [p.strip() for p in phrases if p.strip()] + [w.strip() for w in words if w.strip()]
     out, seen = [], set()
     for t in toks:
@@ -120,12 +132,10 @@ def tokenize(text: str) -> List[str]:
 # Language & Genre parsing
 # ----------------------------
 LANG_ALIASES = {
-    # existing
     "sinhala": {"si", "sinhala", "sinhalese"},
     "tamil": {"ta", "tamil"},
     "hindi": {"hi", "hindi"},
     "english": {"en", "english"},
-    # NEW languages (tokens that should be treated as language, not genre)
     "korean": {"ko", "korean", "hangul"},
     "japanese": {"ja", "japanese", "nihongo"},
     "spanish": {"es", "spanish", "español"},
@@ -140,43 +150,49 @@ LANG_ALIASES = {
     "chinese": {"zh", "chinese", "mandarin", "cantonese", "zh-hans", "zh-hant"},
 }
 
+GENRE_ALIASES = {
+    "lofi": {"lofi", "lo-fi", "lo_fi", "lowfi", "study beats"},
+    "hip hop": {"hip hop", "hip-hop", "rap"},
+    "r&b": {"r&b", "rnb", "r and b"},
+    "edm": {"edm", "electronic", "dance"},
+    "k-pop": {"k-pop", "kpop"},
+    "j-pop": {"j-pop", "jpop"},
+    "pop": {"pop", "synthpop", "electropop"},
+    "rock": {"rock", "alt rock", "alternative", "alt-rock"},
+    "indie": {"indie", "indie pop", "indie rock"},
+    "classical": {"classical", "orchestral"},
+    "jazz": {"jazz"},
+    # treat high-level moods commonly typed in vibe box as soft genres for recall
+    "chill": {"chill", "chillout"},
+    "focus": {"focus", "study"},
+    "party": {"party"},
+    "workout": {"workout", "gym"},
+    "sleep": {"sleep", "sleepy"},
+}
+
+def _genre_match_token_set(g: str) -> Set[str]:
+    g = _norm(g)
+    for canon, aliases in GENRE_ALIASES.items():
+        if g == canon or g in aliases:
+            return {canon, *aliases}
+    return {g}
+
 def _is_range(text: str, ranges: List[Tuple[int,int]]) -> bool:
     return any(lo <= ord(c) <= hi for c in text for (lo, hi) in ranges)
 
-def _is_sinhala(text: str) -> bool:
-    return _is_range(text, [(0x0D80, 0x0DFF)])
-
-def _is_tamil(text: str) -> bool:
-    return _is_range(text, [(0x0B80, 0x0BFF)])
-
-def _is_devanagari(text: str) -> bool:  # Hindi
-    return _is_range(text, [(0x0900, 0x097F)])
-
-# NEW script checks
-def _is_hangul(text: str) -> bool:      # Korean
-    return _is_range(text, [(0x1100,0x11FF),(0x3130,0x318F),(0xAC00,0xD7AF)])
-
-def _is_hiragana(text: str) -> bool:    # Japanese
-    return _is_range(text, [(0x3040,0x309F)])
-
-def _is_katakana(text: str) -> bool:    # Japanese
-    return _is_range(text, [(0x30A0,0x30FF)])
-
-def _is_cjk(text: str) -> bool:         # CJK ideographs (Chinese & also used in JP)
-    return _is_range(text, [(0x4E00,0x9FFF)])
-
-def _is_arabic_script(text: str) -> bool:
-    return _is_range(text, [(0x0600,0x06FF),(0x0750,0x077F)])
-
-def _is_thai_script(text: str) -> bool:
-    return _is_range(text, [(0x0E00,0x0E7F)])
-
-def _is_cyrillic(text: str) -> bool:
-    return _is_range(text, [(0x0400,0x04FF)])
+def _is_sinhala(text: str) -> bool: return _is_range(text, [(0x0D80, 0x0DFF)])
+def _is_tamil(text: str) -> bool:   return _is_range(text, [(0x0B80, 0x0BFF)])
+def _is_devanagari(text: str) -> bool:  return _is_range(text, [(0x0900, 0x097F)])
+def _is_hangul(text: str) -> bool:      return _is_range(text, [(0x1100,0x11FF),(0x3130,0x318F),(0xAC00,0xD7AF)])
+def _is_hiragana(text: str) -> bool:    return _is_range(text, [(0x3040,0x309F)])
+def _is_katakana(text: str) -> bool:    return _is_range(text, [(0x30A0,0x30FF)])
+def _is_cjk(text: str) -> bool:         return _is_range(text, [(0x4E00,0x9FFF)])
+def _is_arabic_script(text: str) -> bool: return _is_range(text, [(0x0600,0x06FF),(0x0750,0x077F)])
+def _is_thai_script(text: str) -> bool:   return _is_range(text, [(0x0E00,0x0E7F)])
+def _is_cyrillic(text: str) -> bool:      return _is_range(text, [(0x0400,0x04FF)])
 
 def _detect_lang_from_text(text: str) -> Optional[str]:
-    if not text:
-        return None
+    if not text: return None
     if _is_sinhala(text): return "sinhala"
     if _is_tamil(text): return "tamil"
     if _is_devanagari(text): return "hindi"
@@ -185,55 +201,35 @@ def _detect_lang_from_text(text: str) -> Optional[str]:
     if _is_arabic_script(text): return "arabic"
     if _is_thai_script(text): return "thai"
     if _is_cyrillic(text): return "russian"
-    # CJK without kana → treat as Chinese (likely)
     if _is_cjk(text): return "chinese"
-    return None  # likely english/latin
+    return None
 
-def parse_language_and_genres(genre_or_language: Optional[str]) -> Tuple[Optional[str], List[str]]:
-    """
-    Returns (language, genres[]) with multi-word fixes (e.g., "hip hop", "r&b", "lofi").
-    Accepts tokens like: si/ta/hi/en, sinhala/tamil/hindi/english, and language names above.
-    Everything else is treated as a genre term.
-    """
-    if not genre_or_language:
+def parse_language_and_genres(text: Optional[str]) -> Tuple[Optional[str], List[str]]:
+    if not text:
         return None, []
-
-    raw = genre_or_language.strip()
-
-    # 1) Quoted phrases as single tokens
+    raw = text.strip()
     phrases = re.findall(r'"([^"]+)"', raw)
     remainder = re.sub(r'"[^"]+"', ' ', raw)
-
-    # 2) Split remainder by , | / and then by spaces
     chunks = re.split(r"[,\|/]+", remainder)
-
     tokens: List[str] = []
     for c in chunks:
         c = _norm(c)
         if c:
-            tokens.extend(c.split())
-
-    # Add back phrases (normalized)
+            tokens.extend(re.findall(r"[a-z0-9\-\&]+", c))
     tokens.extend([_norm(p) for p in phrases if p.strip()])
 
-    # 3) Stitch common multi-word genres
+    # stitch common multi-words
     fixed: List[str] = []
     i = 0
     while i < len(tokens):
         t = tokens[i]
         nxt = tokens[i+1] if i+1 < len(tokens) else ""
         nxt2 = tokens[i+2] if i+2 < len(tokens) else ""
-
-        if t == "hip" and nxt == "hop":
-            fixed.append("hip hop"); i += 2; continue
-        if t == "r" and nxt == "and" and nxt2 == "b":
-            fixed.append("r&b"); i += 3; continue
-        if t == "lo" and nxt == "fi":
-            fixed.append("lofi"); i += 2; continue
-
+        if t == "hip" and nxt == "hop": fixed.append("hip hop"); i += 2; continue
+        if t == "r" and nxt == "and" and nxt2 == "b": fixed.append("r&b"); i += 3; continue
+        if t == "lo" and nxt == "fi": fixed.append("lofi"); i += 2; continue
         fixed.append(t); i += 1
 
-    # 4) Separate language aliases vs genres
     lang: Optional[str] = None
     genres: List[str] = []
     for tok in fixed:
@@ -247,33 +243,8 @@ def parse_language_and_genres(genre_or_language: Optional[str]) -> Tuple[Optiona
         else:
             genres.append(tok)
 
-    genres = list(dict.fromkeys(genres))  # de-dup, preserve order
+    genres = list(dict.fromkeys(genres))
     return lang, genres
-
-GENRE_ALIASES = {
-    "lofi": {"lofi", "lo-fi", "lo_fi", "lowfi"},
-    "hip hop": {"hip hop", "hip-hop", "rap"},
-    "r&b": {"r&b", "rnb", "r and b"},
-    "edm": {"edm", "electronic", "dance"},
-    "k-pop": {"k-pop", "kpop"},
-    "j-pop": {"j-pop", "jpop"},
-    "pop": {"pop"},
-    "rock": {"rock", "alt rock", "alternative"},
-    "indie": {"indie", "indie pop", "indie rock"},
-    "classical": {"classical", "orchestral"},
-    "jazz": {"jazz"},
-    "sinhala": {"sinhala"},
-    "tamil": {"tamil"},
-    "hindi": {"hindi"},
-    "english": {"english"},
-}
-
-def _genre_match_token_set(g: str) -> Set[str]:
-    g = _norm(g)
-    for canon, aliases in GENRE_ALIASES.items():
-        if g == canon or g in aliases:
-            return {canon, *aliases}
-    return {g}
 
 # ----------------------------
 # Artist genres (BATCH + CACHE)
@@ -312,10 +283,6 @@ def _artist_matches_genre_strict(artist_ids: List[str], genre_tokens: List[str])
                 if w in ag or ag in w:
                     return True
     return False
-
-def _text_contains_any(text: str, tokens: List[str]) -> bool:
-    tn = _norm(text)
-    return any(t in tn for t in tokens if t)
 
 def _track_matches_language(track: dict, desired_lang: Optional[str]) -> bool:
     if not desired_lang:
@@ -360,33 +327,32 @@ def _track_matches_language(track: dict, desired_lang: Optional[str]) -> bool:
     return False
 
 # ----------------------------
-# Query variants (randomized)
+# Vibe/Genre query variants (single prompt)
 # ----------------------------
-def build_query_variants(vibe_description: str, mood: str | None = None,
-                         activity: str | None = None, genre_or_language: str | None = None) -> List[str]:
-    vd_tokens = tokenize(vibe_description)
-    combos: List[str] = []
-    if len(vd_tokens) >= 2:
-        combos.append(" ".join(vd_tokens[:2]))
-    if vd_tokens:
-        combos.append(vd_tokens[0])
-    for t in [mood, activity, genre_or_language]:
-        if t and _norm(t) != "none":
-            combos.append(t)
-    seen: Set[str] = set()
+def _build_query_variants_from_prompt(prompt: str, genres: List[str]) -> List[str]:
+    toks = tokenize(prompt)
+    # favor quoted phrases / first two tokens / genres
     variants: List[str] = []
-    for q in combos:
+    if len(toks) >= 2:
+        variants.append(" ".join(toks[:2]))
+    if toks:
+        variants.append(toks[0])
+    variants.extend(genres[:3])
+    # add the raw prompt last
+    if prompt:
+        variants.append(prompt)
+    # de-dup while preserving order
+    seen, out = set(), []
+    for q in variants:
         qn = _norm(q)
         if qn and qn not in seen:
-            variants.append(q)
+            out.append(q)
             seen.add(qn)
-    if vibe_description and _norm(vibe_description) not in seen:
-        variants.append(vibe_description)
-    random.shuffle(variants)
-    return variants
+    random.shuffle(out)
+    return out[:MAX_VARIANTS] if len(out) > MAX_VARIANTS else out
 
 # ----------------------------
-# Search helpers (multi-offset, strict)
+# Search helpers
 # ----------------------------
 def search_tracks(query: str, limit: int, used_ids: Set[str],
                   required_lang: Optional[str], required_genres: List[str],
@@ -396,7 +362,7 @@ def search_tracks(query: str, limit: int, used_ids: Set[str],
         params = {"q": query, "type": "track", "limit": min(limit, 50)}
         if market:
             params["market"] = market
-        params["offset"] = _rand_offset(450)
+        params["offset"] = _rand_offset(MAX_OFFSET_SEARCH)
 
         data = sp_get("https://api.spotify.com/v1/search", params=params)
         if not data or "tracks" not in data:
@@ -459,7 +425,7 @@ def search_playlists_and_collect_tracks(
         params = {"q": query, "type": "playlist", "limit": max_playlists}
         if market:
             params["market"] = market
-        params["offset"] = _rand_offset(200)
+        params["offset"] = _rand_offset(MAX_OFFSET_PL)
 
         data = sp_get("https://api.spotify.com/v1/search", params=params)
         if not data or "playlists" not in data:
@@ -475,10 +441,13 @@ def search_playlists_and_collect_tracks(
             pl_id = pl.get("id")
             if not pl_id:
                 continue
-            tracks_params = {"limit": per_playlist_limit}
+            tracks_params = {
+                "limit": per_playlist_limit,
+                "fields": "items(track(id,name,explicit,external_urls,album(name),artists(id,name))),next",
+            }
             if market:
                 tracks_params["market"] = market
-            tracks_params["offset"] = _rand_offset(200)
+            tracks_params["offset"] = _rand_offset(MAX_OFFSET_PL)
 
             tracks_data = sp_get(f"https://api.spotify.com/v1/playlists/{pl_id}/tracks", params=tracks_params)
             if not tracks_data or "items" not in tracks_data:
@@ -586,6 +555,8 @@ def fetch_audio_features(track_ids: List[str]) -> Dict[str, Dict]:
     feats: Dict[str, Dict] = {}
     for i in range(0, len(track_ids), 100):
         chunk = track_ids[i:i+100]
+        if not chunk:
+            continue
         data = sp_get("https://api.spotify.com/v1/audio-features", params={"ids": ",".join(chunk)})
         for f in (data or {}).get("audio_features", []) or []:
             if not f or not f.get("id"):
@@ -600,7 +571,7 @@ def fetch_audio_features(track_ids: List[str]) -> Dict[str, Dict]:
     return feats
 
 # ----------------------------
-# Re-ranking (mood/context + vibe/genre boosts)
+# Re-ranking
 # ----------------------------
 def _vibe_boost(track: dict, artist_genres: Set[str], vibe_tokens: List[str], required_genres: List[str]) -> float:
     boost = 0.0
@@ -624,48 +595,54 @@ def rerank_with_mood(final_tracks: List[dict], mood: Optional[str], context: Opt
         return final_tracks
 
     if exclude_explicit:
-        final_tracks = [t for t in final_tracks if not t.get("track", {}).get("explicit", False)]
+        kept = [t for t in final_tracks if not t.get("track", {}).get("explicit", False)]
+        final_tracks = kept or final_tracks
         if not final_tracks:
             return []
-
-    ids = [t["track"]["id"] for t in final_tracks if t.get("track", {}).get("id")]
-    feats = fetch_audio_features(ids)
-
-    targets = mood_targets(_norm(mood or ""), _norm(context or ""))
-    base_scores = score_tracks(targets, feats)
 
     all_artist_ids: List[str] = []
     for t in final_tracks:
         for a in t["track"].get("artists", []):
-            if a.get("id"):
-                all_artist_ids.append(a["id"])
+            if a.get("id"): all_artist_ids.append(a["id"])
     _ensure_artist_genres_cached(all_artist_ids)
 
     vibe_tokens = tokenize(vibe_text)
     for t in final_tracks:
-        tid = t["track"]["id"]
-        f = feats.get(tid, {})
-        base = float(base_scores.get(tid, 0.0))
         ag: Set[str] = set()
         for a in t["track"].get("artists", []):
             ag.update(ARTIST_GENRE_CACHE.get(a.get("id",""), []))
-        b = _vibe_boost(t["track"], ag, vibe_tokens, required_genres)
-        t["score"] = base + b + random.uniform(-0.01, 0.01)
-        t["reason"] = reason_string(f) if f else "features unavailable"
+        t["score"] = _vibe_boost(t["track"], ag, vibe_tokens, required_genres) + random.uniform(-0.005, 0.005)
 
     final_tracks.sort(key=lambda x: x.get("score", 0.0), reverse=True)
-    return final_tracks
+    shortlist = final_tracks[:60]
+
+    ids = [t["track"]["id"] for t in shortlist if t.get("track", {}).get("id")]
+    feats = fetch_audio_features(ids)
+
+    # mood/context are optional; if not provided we still compute with neutral targets
+    targets = mood_targets(_norm(mood or ""), _norm(context or ""))
+    base_scores = score_tracks(targets, feats)
+
+    ranked: List[dict] = []
+    for t in shortlist:
+        tid = t["track"]["id"]
+        base = float(base_scores.get(tid, 0.0))
+        t["score"] = base + (t.get("score", 0.0))
+        f = feats.get(tid, {})
+        t["reason"] = reason_string(f) if f else "features unavailable"
+        ranked.append(t)
+
+    ranked.sort(key=lambda x: x.get("score", 0.0), reverse=True)
+    return ranked
 
 # ----------------------------
-# Market selection (NEW with language hints)
+# Market selection
 # ----------------------------
 LANG_MARKETS_HINT = {
-    # existing region logic
     "sinhala": ["LK", "IN"],
     "tamil":   ["LK", "IN"],
     "hindi":   ["IN"],
     "english": ["US", "GB"],
-    # NEW language → market priorities
     "korean":      ["KR"],
     "japanese":    ["JP"],
     "spanish":     ["ES", "MX", "US"],
@@ -677,17 +654,10 @@ LANG_MARKETS_HINT = {
     "russian":     ["RU"],
     "indonesian":  ["ID"],
     "thai":        ["TH"],
-    # Spotify not in mainland China; use HK/TW/SG for “chinese”
     "chinese":     ["TW", "HK", "SG"],
 }
 
 def _pick_markets(desired_lang: Optional[str]) -> List[str]:
-    """
-    Build a de-duplicated priority list of markets to query, combining:
-      1) language hints (if we have a language)
-      2) SPOTIFY_MARKETS from .env (user preference)
-      3) DEFAULT_MARKET as final fallback
-    """
     lang_hint = LANG_MARKETS_HINT.get((desired_lang or "").lower(), [])
     out: List[str] = []
     for m in lang_hint + MARKETS_PREF + [DEFAULT_MARKET]:
@@ -697,7 +667,174 @@ def _pick_markets(desired_lang: Optional[str]) -> List[str]:
     return out
 
 # ----------------------------
-# Generate Playlist from User Settings
+# PUBLIC: Build from a single prompt: "Describe your vibe and genre"
+# ----------------------------
+def generate_playlist_from_prompt(
+    prompt: str,
+    tracks_per_playlist: int = 15,
+    exclude_explicit: bool = False,
+    mood_hint: str | None = None  # optional; UI can pass None
+):
+    """
+    Single-entry API for UI with one text box: "Describe your vibe and genre".
+    Examples:
+      - "moody late-night lofi, focus, english"
+      - "Tamil romantic hip hop for gym"
+      - "\"sunset drive\" indie pop"
+    """
+    prompt = (prompt or "").strip()
+    if not prompt:
+        return [], set()
+
+    desired_lang, possible_genres = parse_language_and_genres(prompt)
+    # If not explicit, try script detection
+    if not desired_lang:
+        inferred = _detect_lang_from_text(prompt)
+        if inferred:
+            desired_lang = inferred
+
+    # Filter genre candidates to canonical-ish words
+    canonical_genres: List[str] = []
+    for g in possible_genres:
+        # keep if it matches a known alias group or looks genre-like (short tokens)
+        if any(g in aliases or g == canon for canon, aliases in GENRE_ALIASES.items()):
+            canonical_genres.append(g)
+        elif len(g) <= 12 and g.isalpha():
+            # allow soft "mood-genres" like chill/focus
+            canonical_genres.append(g)
+    # de-dup while keeping order
+    seen = set(); canonical_genres = [x for x in canonical_genres if not (x in seen or seen.add(x))]
+
+    # markets
+    markets = _pick_markets(desired_lang)
+    if not desired_lang and len(markets) > 2:
+        markets = markets[:2]
+    broad_fallback_markets: List[str] = []
+    for m in ["US", "GB", "IN", DEFAULT_MARKET]:
+        if m not in markets:
+            broad_fallback_markets.append(m)
+
+    # queries
+    variants = _build_query_variants_from_prompt(prompt, canonical_genres)
+
+    used_ids: Set[str] = set()
+    final_tracks: List[dict] = []
+    target = tracks_per_playlist
+    half_target = max(1, target // 2)
+    fill_cutoff = int(target * FILL_STOP_RATIO)
+
+    start_ts = time.monotonic()
+    def _time_up() -> bool:
+        return (time.monotonic() - start_ts) >= BUDGET_SECS
+
+    # Pass 1 — strict by lang+genres
+    for q in variants:
+        if len(final_tracks) >= target or _time_up():
+            break
+        for mkt in markets:
+            fetched, used_ids = search_tracks(
+                query=q,
+                limit=max(20, target * 2),
+                used_ids=used_ids,
+                required_lang=desired_lang,
+                required_genres=canonical_genres,
+                market=mkt,
+                tries=SEARCH_TRIES
+            )
+            final_tracks.extend([t for t in fetched if t not in final_tracks])
+            if len(final_tracks) >= fill_cutoff or _time_up():
+                break
+
+    # Pass 2 — mine playlists
+    if len(final_tracks) < target and not _time_up():
+        for q in variants:
+            if len(final_tracks) >= target or _time_up():
+                break
+            for mkt in markets:
+                pl_tracks, used_ids = search_playlists_and_collect_tracks(
+                    query=q,
+                    per_playlist_limit=15,
+                    used_ids=used_ids,
+                    required_lang=desired_lang,
+                    required_genres=canonical_genres,
+                    max_playlists=2,
+                    market=mkt,
+                    tries=PLAYLIST_TRIES
+                )
+                final_tracks.extend([t for t in pl_tracks if t not in final_tracks])
+                if len(final_tracks) >= fill_cutoff or _time_up():
+                    break
+
+    # Pass 3 — seed recommendations by genre
+    if len(final_tracks) < target and canonical_genres and not _time_up():
+        for mkt in markets:
+            if len(final_tracks) >= target or _time_up():
+                break
+            recs, used_ids = recommend_by_genre(
+                required_genres=canonical_genres,
+                limit=target - len(final_tracks),
+                used_ids=used_ids,
+                market=mkt
+            )
+            final_tracks.extend([t for t in recs if t not in final_tracks])
+
+    # Pass 4 — relax language only
+    if len(final_tracks) < half_target and desired_lang and not _time_up():
+        for q in variants:
+            if len(final_tracks) >= target or _time_up():
+                break
+            for mkt in markets:
+                fetched, used_ids = search_tracks(
+                    query=q,
+                    limit=max(20, target * 2),
+                    used_ids=used_ids,
+                    required_lang=None,
+                    required_genres=canonical_genres,
+                    market=mkt,
+                    tries=max(1, SEARCH_TRIES - 1)
+                )
+                final_tracks.extend([t for t in fetched if t not in final_tracks])
+                if len(final_tracks) >= fill_cutoff or _time_up():
+                    break
+
+    # Emergency — drop all constraints, broaden markets
+    if not final_tracks and not _time_up():
+        for q in variants[:3]:
+            if _time_up():
+                break
+            for mkt in (markets + broad_fallback_markets)[:4]:
+                fetched, used_ids = search_tracks(
+                    query=q,
+                    limit=max(20, target),
+                    used_ids=used_ids,
+                    required_lang=None,
+                    required_genres=[],
+                    market=mkt,
+                    tries=1
+                )
+                final_tracks.extend([t for t in fetched if t not in final_tracks])
+                if len(final_tracks) >= max(8, half_target) or _time_up():
+                    break
+            if len(final_tracks) >= max(8, half_target) or _time_up():
+                break
+
+    if not final_tracks:
+        return [], used_ids
+
+    ranked = rerank_with_mood(
+        final_tracks=final_tracks,
+        mood=mood_hint,            # can be None
+        context=None,
+        exclude_explicit=exclude_explicit,
+        vibe_text=prompt,
+        required_genres=canonical_genres
+    )
+    if not ranked:
+        return [], used_ids
+    return ranked[:target], used_ids
+
+# ----------------------------
+# BACKWARD-COMPAT: old multi-field entry (still available if used elsewhere)
 # ----------------------------
 def generate_playlist_from_user_settings(
     vibe_description: str,
@@ -709,115 +846,12 @@ def generate_playlist_from_user_settings(
     seed: int | None = None,
     exclude_explicit: bool = False
 ):
-    if used_ids is None:
-        used_ids = set()
-
-    desired_lang, desired_genres = parse_language_and_genres(genre_or_language)
-
-    # If user didn’t specify a language, try inferring from the vibe text
-    if not desired_lang:
-        inferred = _detect_lang_from_text(vibe_description or "")
-        if inferred:
-            desired_lang = inferred
-
-    # choose markets to try in order (based on language + env)
-    markets = _pick_markets(desired_lang)
-
-    final_tracks: list = []
-    target = tracks_per_playlist
-    half_target = max(1, target // 2)
-
-    variants = build_query_variants(
-        vibe_description=vibe_description,
-        mood=mood,
-        activity=activity,
-        genre_or_language=genre_or_language
+    """
+    Kept for compatibility. Prefer `generate_playlist_from_prompt(prompt, ...)`.
+    """
+    prompt = " ".join([x for x in [vibe_description, genre_or_language, mood, activity] if x])
+    return generate_playlist_from_prompt(
+        prompt=prompt,
+        tracks_per_playlist=tracks_per_playlist,
+        exclude_explicit=exclude_explicit
     )
-
-    # Pass 1: strict search (multi-offset) across markets
-    for q in variants:
-        if len(final_tracks) >= target:
-            break
-        for mkt in markets:
-            fetched, used_ids = search_tracks(
-                query=q, limit=max(30, target * 3), used_ids=used_ids,
-                required_lang=desired_lang, required_genres=desired_genres,
-                market=mkt, tries=3
-            )
-            final_tracks.extend([t for t in fetched if t not in final_tracks])
-            if len(final_tracks) >= target:
-                break
-
-    # Pass 2: playlist mining (strict) across markets
-    if len(final_tracks) < target:
-        for q in variants:
-            if len(final_tracks) >= target:
-                break
-            for mkt in markets:
-                pl_tracks, used_ids = search_playlists_and_collect_tracks(
-                    query=q, per_playlist_limit=30, used_ids=used_ids,
-                    required_lang=desired_lang, required_genres=desired_genres,
-                    max_playlists=3, market=mkt, tries=2
-                )
-                final_tracks.extend([t for t in pl_tracks if t not in final_tracks])
-                if len(final_tracks) >= target:
-                    break
-
-    # Pass 3: genre-based recommendations (market-aware, still strict on genre)
-    if len(final_tracks) < target and desired_genres:
-        for mkt in markets:
-            if len(final_tracks) >= target:
-                break
-            recs, used_ids = recommend_by_genre(
-                required_genres=desired_genres,
-                limit=target - len(final_tracks),
-                used_ids=used_ids,
-                market=mkt
-            )
-            final_tracks.extend([t for t in recs if t not in final_tracks])
-
-    # Pass 4: relax ONLY language (keep genres strict) across markets
-    if len(final_tracks) < half_target and desired_lang:
-        for q in variants:
-            if len(final_tracks) >= target:
-                break
-            for mkt in markets:
-                fetched, used_ids = search_tracks(
-                    query=q, limit=max(30, target * 2), used_ids=used_ids,
-                    required_lang=None,
-                    required_genres=desired_genres,
-                    market=mkt, tries=2
-                )
-                final_tracks.extend([t for t in fetched if t not in final_tracks])
-                if len(final_tracks) >= target:
-                    break
-
-    # Pass 5: language-only requests (no genres) → markets already prioritized
-    if len(final_tracks) < half_target and not desired_genres and desired_lang:
-        for q in variants:
-            if len(final_tracks) >= target:
-                break
-            for mkt in markets:
-                fetched, used_ids = search_tracks(
-                    query=q, limit=max(30, target * 2), used_ids=used_ids,
-                    required_lang=desired_lang, required_genres=[],
-                    market=mkt, tries=2
-                )
-                final_tracks.extend([t for t in fetched if t not in final_tracks])
-                if len(final_tracks) >= target:
-                    break
-
-    if not final_tracks:
-        return [], used_ids
-
-    ranked = rerank_with_mood(
-        final_tracks,
-        mood,
-        activity,
-        exclude_explicit=exclude_explicit,
-        vibe_text=vibe_description or "",
-        required_genres=desired_genres
-    )
-    if not ranked:
-        return [], used_ids
-    return ranked[:target], used_ids
