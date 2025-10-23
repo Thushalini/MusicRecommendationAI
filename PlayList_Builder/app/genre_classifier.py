@@ -2,223 +2,178 @@ from __future__ import annotations
 
 import os
 import re
-import math
 import logging
 from pathlib import Path
-from typing import Dict, Tuple, Optional, Any, List, Set
-from collections import defaultdict, Counter
+from typing import Dict, Tuple, Optional, Any
 
 import pandas as pd
+import joblib
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import LabelEncoder
 
 log = logging.getLogger("genre")
 if not log.handlers:
     logging.basicConfig(level=logging.INFO)
 
-# --------------------------------------------
-# Paths (env-overridable)
-# --------------------------------------------
-MODEL_PATH   = Path(os.getenv("GENRE_MODEL_PATH",   "app/models/genre_classifier.joblib")).resolve()  # kept for future use
+# -------------------------------------------------
+# Model location (override with GENRE_MODEL_PATH)
+# -------------------------------------------------
+MODEL_PATH = Path(os.getenv("GENRE_MODEL_PATH", "app/models/genre_classifier.joblib")).resolve()
 DATASET_PATH = Path(os.getenv("GENRE_DATASET_PATH", "app/data/genre_dataset.csv")).resolve()
 
-# --------------------------------------------
-# Text helpers
-# --------------------------------------------
-_WORD_RE = re.compile(r"[a-z0-9]+")
+# -------------------------------------------------
+# Optional deps (we avoid loading if sklearn missing)
+# -------------------------------------------------
+try:
+    import joblib  # type: ignore
+    _HAS_JOBLIB = True
+except Exception:
+    _HAS_JOBLIB = False
 
-def _norm(s: str) -> str:
-    s = (s or "").lower().strip()
-    s = re.sub(r"\s+", " ", s)
-    return s
+try:
+    import sklearn  # type: ignore  # noqa: F401
+    _HAS_SKLEARN = True
+except Exception:
+    _HAS_SKLEARN = False
 
-def _tokens(s: str) -> List[str]:
-    return [w for w in _WORD_RE.findall((s or "").lower()) if len(w) >= 2]
+# -------------------------------------------------
+# Try to load Genre Classification model
+# -------------------------------------------------
+_PIPELINE: Optional[Any] = None
+_GENRE_CLASSES: Optional[list[str]] = None
+_MOOD_ENCODER: Optional[LabelEncoder] = None
 
-def _ngrams(words: List[str], n: int) -> List[str]:
-    return [" ".join(words[i:i+n]) for i in range(max(0, len(words)-n+1))]
-
-def _extract_keywords(cell: str) -> Set[str]:
-    """
-    Extract keywords/phrases from dataset 'text' column.
-    Supports comma/semicolon separated entries and free text.
-    - If the cell looks like a list: split by , ; | and trim
-    - Always also break into unigram tokens
-    """
-    cell = _norm(str(cell))
-    if not cell:
-        return set()
-
-    # split by commas/semicolons/pipes if present
-    parts = re.split(r"[;,|]+", cell) if re.search(r"[;,|]", cell) else [cell]
-    phrases: Set[str] = set()
-    for p in parts:
-        p = _norm(p)
-        if not p:
-            continue
-        phrases.add(p)
-        for t in _tokens(p):
-            phrases.add(t)
-
-    return {k for k in phrases if k}
-
-# --------------------------------------------
-# In-memory keyword index (PRIMARY LOGIC)
-# --------------------------------------------
-# mood -> {
-#   "rows": List[{"genre": str, "kw": Set[str>}],
-#   "inv":  dict[keyword -> Counter({genre: count})],
-# }
-_INDEX: Dict[str, Dict[str, Any]] = {}
-_ALL_GENRES: List[str] = []
-
-def _build_index(df: pd.DataFrame) -> None:
-    global _INDEX, _ALL_GENRES
-    _INDEX = {}
-    genres = set()
-
-    def add_row(bucket: str, genre: str, kw: Set[str]):
-        b = _INDEX.setdefault(bucket, {"rows": [], "inv": defaultdict(Counter), "df": Counter(), "N": 0})
-        if not kw:
-            return
-        b["rows"].append({"genre": genre, "kw": kw})
-        b["N"] += 1
-        genres.add(genre)
-        # update inverted + document frequency per keyword
-        for k in kw:
-            b["inv"][k][genre] += 1
-        # count DF once per row (unique kw already)
-        b["df"].update(kw)
-
-    for _, row in df.iterrows():
-        mood  = _norm(row["mood"])
-        genre = str(row["genre"]).strip()
-        kw    = _extract_keywords(row["text"])
-        add_row(mood, genre, kw)
-        add_row("__any__", genre, kw)  # global fallback bucket
-
-    # precompute IDF per bucket
-    for bucket, b in _INDEX.items():
-        N = max(1, b["N"])
-        b["idf"] = {k: (math.log((N) / (1.0 + df_k)) + 1.0) for k, df_k in b["df"].items()}  # +1 smoothing
-
-    _ALL_GENRES = sorted(genres)
-    log.info("[genre] Index ready. Moods=%d, GlobalRows=%d, Genres=%d",
-             len([m for m in _INDEX.keys() if m != "__any__"]),
-             len(_INDEX.get("__any__", {}).get("rows", [])),
-             len(_ALL_GENRES))
-
-# Load dataset & build index at import
-_DF: Optional[pd.DataFrame] = None
-if DATASET_PATH.exists():
+if _HAS_JOBLIB and _HAS_SKLEARN and MODEL_PATH.exists():
     try:
-        _DF = pd.read_csv(DATASET_PATH)
-        for col in ("text", "mood", "genre"):
-            if col not in _DF.columns:
-                raise ValueError(f"Missing required column '{col}' in {DATASET_PATH}")
-        # normalize required columns to strings
-        _DF["text"] = _DF["text"].astype(str)
-        _DF["mood"] = _DF["mood"].astype(str)
-        _DF["genre"] = _DF["genre"].astype(str)
-        _build_index(_DF)
+        obj = joblib.load(MODEL_PATH)
+        if isinstance(obj, dict):
+            _PIPELINE = obj.get("pipeline", None) or None
+            _genre_classes = obj.get("genre_classes", None)
+            _GENRE_CLASSES = [str(c) for c in _genre_classes] if _genre_classes is not None else None
+            _MOOD_ENCODER = obj.get("mood_encoder", None) or None
+        else:
+            _PIPELINE = obj
+            _GENRE_CLASSES = [str(c) for c in getattr(_PIPELINE, "classes_", [])] or None
+            # If pipeline is directly loaded, we might not have mood_encoder
+            # This needs to be handled carefully or retrained if missing.
+            log.warning("[genre] Mood encoder not found in direct pipeline load. Retraining might be needed.")
+
+        if _PIPELINE is not None and _GENRE_CLASSES is not None and _MOOD_ENCODER is not None:
+            log.info("[genre] ML model loaded ✅ -> %s", MODEL_PATH)
+        else:
+            log.warning("[genre] Model object missing pipeline, genre classes or mood encoder. Retraining might be needed.")
+            _PIPELINE = None
+            _GENRE_CLASSES = None
+            _MOOD_ENCODER = None
     except Exception as e:
-        log.error("[genre] Failed to load dataset/index: %s", e)
+        _PIPELINE = None
+        _GENRE_CLASSES = None
+        _MOOD_ENCODER = None
+        log.warning("[genre] Failed to load model (%s); retraining might be needed. %s", MODEL_PATH, e)
 else:
-    log.error("[genre] Dataset not found at %s. Keyword matching disabled.", DATASET_PATH)
+    if not MODEL_PATH.exists():
+        log.info("[genre] No model file at %s; training new model.", MODEL_PATH)
+    elif not _HAS_SKLEARN:
+        log.info("[genre] scikit-learn not installed; skipping model load and training.")
+    elif not _HAS_JOBLIB:
+        log.info("[genre] joblib not installed; skipping model load and training.")
 
-# --------------------------------------------
-# Scoring (STRICT keyword-first)
-# --------------------------------------------
-def _score_bucket(user_text: str, bucket_key: str) -> Tuple[str, float, Dict[str, float]]:
+def _normalize_text(text: str) -> str:
+    t = (text or "").lower()
+    t = re.sub(r"[^a-z0-9\s]", " ", t)
+    return " ".join([tok for tok in t.split() if tok])
+
+def train_genre_classifier(
+    dataset_path: Path = DATASET_PATH,
+    model_output_path: Path = MODEL_PATH
+) -> Tuple[Any, list[str], LabelEncoder]:
     """
-    Score genres inside a mood bucket with STRICT keyword matching.
-    - Extract user tokens + n-grams (2,3) to capture phrases
-    - For each matched keyword k:
-        weight = 1.0 (exact token) or 1.5 (if user n-gram equals dataset phrase)
-        score += idf[k] * weight distributed to genres that contain k (via inverted index)
-    - Final score per genre = sum over matched keywords
-    - Require MIN_MATCHES to avoid defaulting to frequent genres (no more "always pop")
+    Trains a genre classification model using text and mood features.
     """
-    if bucket_key not in _INDEX:
-        return "unknown", 0.0, {}
+    if not _HAS_SKLEARN or not _HAS_JOBLIB:
+        log.error("scikit-learn or joblib not installed. Cannot train genre classifier.")
+        raise ImportError("scikit-learn and joblib are required for genre classification.")
 
-    b   = _INDEX[bucket_key]
-    idf = b["idf"]
-    inv = b["inv"]
+    log.info("Loading genre dataset from %s", dataset_path)
+    df = pd.read_csv(dataset_path)
+    df["text"] = df["text"].apply(_normalize_text)
 
-    # build user features
-    words = _tokens(user_text)
-    if not words:
-        return "unknown", 0.0, {}
+    # Encode moods
+    mood_encoder = LabelEncoder()
+    df["mood_encoded"] = mood_encoder.fit_transform(df["mood"])
 
-    # candidate keyword set to check: single tokens + 2-gram/3-gram phrases
-    uni  = set(words)
-    bi   = set(_ngrams(words, 2))
-    tri  = set(_ngrams(words, 3))
-    user_keys = uni | bi | tri
+    # Create a combined feature for text and mood
+    # We'll concatenate the normalized text with the encoded mood as a string
+    # This allows TF-IDF to pick up on mood-related "tokens"
+    df["combined_features"] = df["text"] + " mood_" + df["mood"].str.lower()
 
-    per_genre = Counter()
-    matched_keywords = set()
+    X = df["combined_features"]
+    y = df["genre"]
 
-    for k in user_keys:
-        if k not in inv:
-            continue
-        matched_keywords.add(k)
-        base = idf.get(k, 1.0)
-        weight = 1.5 if (" " in k) else 1.0  # phrase bonus
-        for g, cnt in inv[k].items():
-            per_genre[g] += base * weight * cnt
+    log.info("Training genre classification pipeline...")
+    pipeline = Pipeline([
+        ('tfidf', TfidfVectorizer(stop_words='english', max_features=5000)),
+        ('classifier', LogisticRegression(max_iter=1000, solver='liblinear'))
+    ])
+    pipeline.fit(X, y)
 
-    # enforce strictness (avoid "pop" bias)
-    MIN_MATCHES = 2 if (" " not in user_text.strip()) else 1  # if user wrote a phrase, allow 1; else need ≥2 hits
-    if len(matched_keywords) < MIN_MATCHES or not per_genre:
-        return "unknown", 0.0, {}
+    genre_classes = list(pipeline.classes_)
+    log.info("Genre classification model trained with classes: %s", genre_classes)
 
-    # normalize to pseudo-probabilities
-    total = sum(per_genre.values())
-    scores = {g: float(s) / float(total) for g, s in per_genre.items()}
-    # fill zeros for stability
-    for g in _ALL_GENRES:
-        scores.setdefault(g, 0.0)
+    # Save the pipeline, genre classes, and mood encoder
+    model_output_path.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump({
+        "pipeline": pipeline,
+        "genre_classes": genre_classes,
+        "mood_encoder": mood_encoder
+    }, model_output_path)
+    log.info("Genre classification model saved to %s", model_output_path)
 
-    # pick best with a small margin requirement
-    best_g, best_s = max(scores.items(), key=lambda x: x[1])
-    # if tie within small epsilon, break by number of distinct matched keywords that contributed to that genre
-    EPS = 1e-9
-    ties = [g for g, v in scores.items() if abs(v - best_s) <= EPS]
-    if len(ties) > 1:
-        # count contributing keywords per tied genre
-        contrib = {g: 0 for g in ties}
-        for k in matched_keywords:
-            if k in inv:
-                for g in ties:
-                    if g in inv[k]:
-                        contrib[g] += 1
-        best_g = max(contrib.items(), key=lambda x: (x[1], x[0]))[0]  # more contributing kws, then alpha
+    global _PIPELINE, _GENRE_CLASSES, _MOOD_ENCODER
+    _PIPELINE = pipeline
+    _GENRE_CLASSES = genre_classes
+    _MOOD_ENCODER = mood_encoder
 
-    return best_g, float(scores[best_g]), dict(sorted(scores.items()))
+    return pipeline, genre_classes, mood_encoder
 
-# --------------------------------------------
-# Public API
-# --------------------------------------------
+# Train model if not already loaded
+if _PIPELINE is None:
+    try:
+        train_genre_classifier()
+    except Exception as e:
+        log.error("Failed to train genre classifier on startup: %s", e)
+
 def classify_genre(text: str, detected_mood: str) -> Tuple[str, float, Dict[str, float]]:
     """
-    STRICT keyword-based classification:
-      1) Try mood bucket exact match (lowercased).
-      2) If no confident keyword hit there, try global '__any__' bucket.
-      3) If still nothing, return ("unknown", 0.0, {}).
-
-    This prevents bias toward frequent genres like 'pop' by
-    requiring real keyword overlap and never defaulting to a majority class.
+    Classifies the genre based on input text and a detected mood.
+    Returns: (genre_label, confidence, per_class_scores)
     """
-    mood_key = _norm(detected_mood)
-    # 1) mood-specific
-    g, c, s = _score_bucket(text, mood_key)
-    if g != "unknown":
-        return g, c, s
+    if _PIPELINE is None or _GENRE_CLASSES is None or _MOOD_ENCODER is None:
+        log.error("Genre classification model not loaded or trained.")
+        return "unknown", 0.0, {}
 
-    # 2) global fallback (still strict)
-    g, c, s = _score_bucket(text, "__any__")
-    if g != "unknown":
-        return g, c, s
+    normalized_text = _normalize_text(text)
+    # Ensure detected_mood is in the encoder's classes, if not, use a fallback or retrain
+    if detected_mood not in _MOOD_ENCODER.classes_:
+        log.warning("Detected mood '%s' not in trained mood classes. Using 'unknown' or first available mood.", detected_mood)
+        # Fallback to a known mood or handle as an unknown category
+        # For simplicity, we'll just use the provided mood as a string token
+        # and rely on TF-IDF to handle it, but a more robust solution might
+        # involve re-training or a default mood.
+        mood_token = detected_mood.lower()
+    else:
+        mood_token = detected_mood.lower()
 
-    # 3) nothing matched
-    return "unknown", 0.0, {}
+    combined_input = normalized_text + " mood_" + mood_token
+
+    try:
+        probs = _PIPELINE.predict_proba([combined_input])[0]
+        idx = int(probs.argmax())
+        genre = str(_GENRE_CLASSES[idx])
+        conf = float(probs[idx])
+        return genre, conf, {str(c): float(p) for c, p in zip(_GENRE_CLASSES, probs)}
+    except Exception as e:
+        log.error("Error during genre classification: %s", e)
+        return "unknown", 0.0, {}

@@ -69,16 +69,17 @@ else:
 
 # -------------------------------------------------
 # Lightweight lexicon fallback
+# (keep labels minimal; you can extend if needed)
 # -------------------------------------------------
 MOOD_LEXICON: Dict[str, set[str]] = {
-    "happy": {"happy","joy","excited","fun","party","energetic","dance","vibe","good","great","cheerful","uplift","smile"},
-    "sad": {"sad","down","not happy","blue","depressed","cry","lonely","heartbroken","miss","nostalgic","slow","melancholy","exhausted"},
-    "chill": {"chill","calm","relax","lofi","coffee","study","focus","mellow","soft","ambient","smooth","peaceful"},
-    "angry": {"angry","mad","rage","furious","aggressive","metal","hard","scream"},
-    "energetic": {"hype","pump","fast","high bpm","edm","electro","jump","power","workout"},
-    "romantic": {"love","romance","date","valentine","kiss","crush","affection","couple","romantic","slow dance"},
-    "workout": {"workout","gym","run","cardio","training","hiit","beast","motivation"},
-    "sleep": {"sleep","bedtime","asleep","doze","night","lullaby","soothing","white","noise"}
+    "happy":   {"happy","joy","excited","fun","party","energetic","dance","vibe","good","great","cheerful","uplift","smile"},
+    "sad":     {"sad","down","blue","depressed","cry","lonely","heartbroken","miss","nostalgic","slow","melancholy","exhausted"},
+    "chill":   {"chill","calm","relax","lofi","coffee","study","focus","mellow","soft","ambient","smooth","peaceful"},
+    "angry":   {"angry","mad","rage","furious","aggressive","scream"},
+    "workout": {"workout","gym","run","cardio","training","hiit","beast","motivation","pump","power"},
+    "sleep":   {"sleep","bedtime","asleep","doze","night","lullaby","soothing","white","noise"},
+    # Optional extra:
+    "calm":    {"calm","serene","soothing","gentle","quiet","tranquil"},
 }
 
 def _normalize(text: str) -> list[str]:
@@ -86,50 +87,111 @@ def _normalize(text: str) -> list[str]:
     t = re.sub(r"[^a-z0-9\s]", " ", t)
     return [tok for tok in t.split() if tok]
 
-def _lexicon_detect(text: str) -> Tuple[str, float, Dict[str, int]]:
+def _lexicon_detect(text: str) -> Tuple[str, float, Dict[str, float]]:
     toks = _normalize(text)
-    scores = {m: 0 for m in MOOD_LEXICON}
+    raw_counts = {m: 0 for m in MOOD_LEXICON}
     for mood, vocab in MOOD_LEXICON.items():
         for tok in toks:
             if tok in vocab:
-                scores[mood] += 1
+                raw_counts[mood] += 1
+    # best
     best_mood, best_score = "chill", 0
-    for m, sc in scores.items():
+    for m, sc in raw_counts.items():
         if sc > best_score:
             best_mood, best_score = m, sc
     conf = 0.15 if best_score == 0 else min(0.95, 0.45 + 0.1 * best_score)
-    return best_mood, conf, scores
+    # normalize to 0..1 distribution (avoid div0)
+    denom = sum(raw_counts.values()) or 1
+    probs = {k: (v / denom) for k, v in raw_counts.items()}
+    # Ensure at least the winning mood reflects confidence floor
+    if probs.get(best_mood, 0.0) < 0.15:
+        probs[best_mood] = max(probs.get(best_mood, 0.0), 0.15)
+    # renormalize
+    s = sum(probs.values()) or 1.0
+    probs = {k: v/s for k, v in probs.items()}
+    return best_mood, conf, probs
+
+# -------------------------------------------------
+# Helpers for fusion with RG quiz
+# -------------------------------------------------
+def _complete_moods(d: Dict[str, float], all_labels: set[str]) -> Dict[str, float]:
+    out = {m: 0.0 for m in all_labels}
+    for k, v in (d or {}).items():
+        if k in out:
+            out[k] = float(v)
+        else:
+            # allow unseen moods from quiz to enter label set
+            out[k] = float(v)
+    # re-normalize
+    s = sum(out.values()) or 1.0
+    return {k: (v / s) for k, v in out.items()}
+
+def _fuse_scores(text_scores: Dict[str, float],
+                 quiz_scores: Optional[Dict[str, float]],
+                 w_text: float,
+                 w_quiz: float) -> Dict[str, float]:
+    # union label space (supports quiz introducing labels like "calm")
+    labels = set(text_scores.keys())
+    if quiz_scores:
+        labels |= set(quiz_scores.keys())
+    if not labels:
+        labels = set(MOOD_LEXICON.keys())
+
+    t = _complete_moods(text_scores, labels)
+    q = _complete_moods(quiz_scores or {}, labels)
+
+    fused = {m: (w_text * t.get(m, 0.0) + w_quiz * q.get(m, 0.0)) for m in labels}
+    s = sum(fused.values()) or 1.0
+    return {k: v / s for k, v in fused.items()}
 
 # -------------------------------------------------
 # Public API
+#   Only **text** and **rg_quiz** are used for mood detection.
+#   Others are intentionally ignored per requirement.
 #   Returns: (mood_label, confidence, per_class_scores)
 # -------------------------------------------------
-def detect_mood(text: str) -> Tuple[str, float, Dict[str, float]]:
-    # Use ML model if available
+def detect_mood(
+    text: str,
+    rg_quiz_scores: Optional[Dict[str, float]] = None,
+    w_text: float = 0.7,
+    w_quiz: float = 0.3
+) -> Tuple[str, float, Dict[str, float]]:
+    """
+    Detect mood using ONLY:
+      - Free text (ML model if available → else lexicon)
+      - RG quiz scores (already a dict of mood→score)
+    Fusion: weighted average over shared label space (default 0.7/0.3).
+    """
+    # ---------- text → scores ----------
+    text_probs: Dict[str, float] = {}
+
     if _PIPELINE is not None:
         try:
             if hasattr(_PIPELINE, "predict_proba"):
                 probs = _PIPELINE.predict_proba([text or ""])[0]
                 classes = _CLASSES or [str(c) for c in getattr(_PIPELINE, "classes_", [])]
                 if classes and len(classes) == len(probs):
-                    idx = int(probs.argmax())
-                    mood = str(classes[idx])
-                    conf = float(probs[idx])
-                    if conf < 0.45:
-                        return _lexicon_detect(text)
-                    return mood, conf, {str(c): float(p) for c, p in zip(classes, probs)}
-            # Fallback to plain predict if no probas
-            if hasattr(_PIPELINE, "predict"):
-                pred = _PIPELINE.predict([text or ""])[0]
-                mood = str(pred)
-                # no calibrated proba → give a neutral confidence
-                return mood, 0.6, {mood: 0.6}
+                    text_probs = {str(c): float(p) for c, p in zip(classes, probs)}
+                else:
+                    # fallback to predict only
+                    if hasattr(_PIPELINE, "predict"):
+                        pred = str(_PIPELINE.predict([text or ""])[0])
+                        text_probs = {pred: 1.0}
+            elif hasattr(_PIPELINE, "predict"):
+                pred = str(_PIPELINE.predict([text or ""])[0])
+                text_probs = {pred: 1.0}
         except Exception as e:
             log.warning("[mood] Model predict failed; fallback to lexicon. %s", e)
 
-    # Lexicon fallback
-    best_mood, conf, raw = _lexicon_detect(text)
-    # convert counts to pseudo-scores (normalize to 0..1)
-    total = max(raw.values()) or 1
-    norm = {k: (v / total) for k, v in raw.items()}
-    return best_mood, conf, norm
+    if not text_probs:
+        # lexicon fallback returns normalized dict
+        _, _, text_probs = _lexicon_detect(text)
+
+    # ---------- fuse with RG quiz ONLY ----------
+    fused = _fuse_scores(text_probs, rg_quiz_scores, w_text=w_text, w_quiz=w_quiz)
+
+    # choose best + confidence
+    best_mood = max(fused, key=fused.get)
+    confidence = float(fused[best_mood])
+
+    return best_mood, confidence, fused

@@ -41,7 +41,7 @@ def quadrant_to_label(x: float, y: float) -> str:
         return "angry"
     if dx < 0 and dy < 0:    # QIII
         return "sad"
-    return "relaxed"         # QIV
+    return "chill"         # QIV
 
 def compute_mood_from_quiz(answers: Dict[int, str], focus_yes: Optional[bool]) -> Dict:
     """

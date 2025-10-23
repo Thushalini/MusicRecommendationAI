@@ -214,7 +214,7 @@ with st.sidebar:
 
     # --- Vibe text ---
     vibe_description = st.text_area(
-        "Describe your vibe",
+        "free text",
         value=st.session_state.get("vibe_prefill", ""),
         placeholder='e.g., "rainy bus ride, calm focus, minimal vocals"',
         height=110,
@@ -261,7 +261,7 @@ with st.sidebar:
             st.switch_page("pages/mood_ui.py")  # or "mood_ui.py" if the file is at root
 
         # Optional: also show a link (opens in same tab)
-        st.page_link("pages/mood_ui.py", label="Open mood quiz page")
+        # st.page_link("pages/mood_ui.py", label="Open mood quiz page")
     else:
         # Manual override
         manual_index = mood_options.index(fused_label) if fused_label in mood_options else 3
@@ -280,7 +280,7 @@ with st.sidebar:
     genre_or_language = st.text_input("Genre", placeholder="hip hop, r&b, lofi")
     prefer_auto = st.toggle("Prefer auto-detected genre if available", value=True)
     exclude_explicit = st.toggle("Exclude explicit lyrics", value=False)
-    limit = st.slider("Tracks per playlist", 5, 20, 12)
+    limit = st.slider("Tracks per playlist", 5, 20, 5)
 
     with st.expander("Advanced"):
         show_debug = st.checkbox("Show analyzer debug", value=False)
@@ -469,7 +469,7 @@ with tab_build:
                 tracks=norm_tracks,
                 description=gd.get("desc") or "",
             )
-            st.success(f"Saved (ID: {saved['id']})")
+            st.success(f"Saved ")   #(ID: {saved['id']})
             st.session_state.selected_saved_id = saved["id"]
 
         # --- TRACKS BELOW ---
