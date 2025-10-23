@@ -14,7 +14,7 @@ from app.genre_classifier import MODEL_PATH as GENRE_MODEL_PATH, _PIPELINE as _G
 
 # --- Only import RG quiz helper (no other side-signals) -----------------------
 try:
-    from app.mood_fusion import rg_quiz_signal  # expects {"quiz": {...}} -> {"final":{...},"dist":{...}}
+    from app.mood_signals import rg_quiz_signal  # expects {"quiz": {...}} -> {"final":{...},"dist":{...}}
     _HAS_RG = True
 except Exception:
     _HAS_RG = False

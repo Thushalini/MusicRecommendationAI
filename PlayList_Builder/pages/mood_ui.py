@@ -13,7 +13,45 @@ load_dotenv(dotenv_path, override=False)
 
 API_BASE = os.getenv("AGENTS_API_BASE", "http://127.0.0.1:8000")
 API_KEY  = os.getenv("AGENTS_API_KEY",  "dev-key-change-me")
-HEADERS  = {"Content-Type": "application/json","x-api-key": API_KEY}
+HEADERS  = {"Content-Type": "application/json", "x-api-key": API_KEY}
+
+MOOD_ALIASES = {
+    # Relaxed group
+    "relaxed": "relaxed",
+    "chill": "relaxed",
+    "calm": "relaxed",
+    "peaceful": "relaxed",
+    
+    # Happy group 
+    "happy": "happy",
+    "joyful": "happy",
+    "excited": "happy",
+    "cheerful": "happy",
+    
+    # Sad group
+    "sad": "sad",
+    "melancholy": "sad",
+    "gloomy": "sad",
+    
+    # Angry group
+    "angry": "angry",
+    "frustrated": "angry",
+    "annoyed": "angry",
+    
+    # Workout/Energetic group
+    "workout": "workout",
+    "energetic": "workout",
+    "pumped": "workout",
+    
+    # Sleep/Rest group
+    "sleep": "sleep",
+    "tired": "sleep",
+    "rest": "sleep"
+}
+MOOD_WEIGHTS = {
+    "text": 0.7,  # 70% weight for text analysis
+    "rg_quiz": 0.3  # 30% weight for quiz results
+}
 
 # -----------------------------
 # Page config
@@ -82,6 +120,9 @@ hr{ border:none; border-top:1px solid rgba(255,255,255,.08); margin:10px 0 16px;
 # Helpers
 # -----------------------------
 def switch_to_playlist(mood_label: Optional[str]):
+    if mood_label:
+        mood_label = mood_label.lower()
+        mood_label = MOOD_ALIASES.get(mood_label, mood_label)
     # Save to session for streamlit_app.py
     if mood_label:
         st.session_state["fused_mood"] = {"label": mood_label}
@@ -90,7 +131,7 @@ def switch_to_playlist(mood_label: Optional[str]):
         st.session_state.pop("fused_mood", None)
         st.session_state.pop("fused_mood_label", None)
 
-    # Also expose as URL param (Streamlit ≥1.30 API; fallback for older)
+    # Also expose as URL param (new + fallback API)
     try:
         if mood_label: st.query_params["mood"] = mood_label
         else:          st.query_params.clear()
@@ -104,7 +145,7 @@ def switch_to_playlist(mood_label: Optional[str]):
     # Try to programmatically switch pages (Streamlit ≥1.27)
     for target in ("pages/streamlit_app.py", "streamlit_app.py"):
         try:
-            st.switch_page(target)
+            # st.switch_page(target)
             return
         except Exception:
             continue
@@ -112,6 +153,9 @@ def switch_to_playlist(mood_label: Optional[str]):
     # Fallback: show a link the user can click
     st.success("Mood ready — open the playlist page to continue.")
     st.page_link("pages/streamlit_app.py", label="Go to main app ▶️", icon="🎵")
+
+# Choice mapping
+OPT = {"Strongly Agree":"SA","Agree":"A","Can't Say":"CS","Disagree":"D","Strongly Disagree":"SD"}
 
 # -----------------------------
 # UI
@@ -121,86 +165,40 @@ st.markdown("## Analyse your mood", unsafe_allow_html=True)
 st.markdown("<p class='sub'>Describe your vibe and answer the 10-item questionnaire. (All other signals removed.)</p>", unsafe_allow_html=True)
 st.markdown('</div><div class="card__body">', unsafe_allow_html=True)
 
-OPT = {"Strongly Agree":"SA","Agree":"A","Can't Say":"CS","Disagree":"D","Strongly Disagree":"SD"}
-
-<<<<<<< HEAD
-with st.form("mood_all", clear_on_submit=False):
-    # ---------------- Two columns ----------------
+with st.form("mood_text_rg", clear_on_submit=False):
     st.markdown('<div class="twocol">', unsafe_allow_html=True)
 
-    # LEFT: Free text + signals + SAM + context
+    # LEFT: Free text
     with st.container():
         st.markdown('<div class="panel">', unsafe_allow_html=True)
-        st.markdown('<h3>Your Vibe & Signals</h3><div class="hint">Free text + quick selectors</div>', unsafe_allow_html=True)
-
+        st.markdown('<h3>How do you feel?</h3><div class="hint">Free text (optional)</div>', unsafe_allow_html=True)
         txt = st.text_area(
-            "1) In your own words, how do you feel right now?",
+            "In your own words, how do you feel right now?",
             value=st.session_state.get("vibe_prefill", ""),
-            placeholder="e.g., It's been a long day but I'm hopeful.",
-            height=110,
+            placeholder="e.g., It’s been a long day but I’m hopeful.",
+            height=140,
+            label_visibility="collapsed",
         )
-        st.markdown("---")
-
-        c1, c2 = st.columns(2)
-        with c1:
-            color = seg("2) Pick a color", ["Yellow","Green","Red","Blue","Purple","Orange","Black","White"])
-        with c2:
-            emoji = seg("3) Pick an emoji", ["😄","🙂","😠","😢","💪","😴"])
-
-        st.markdown("**4) Self-Assessment Manikin (SAM)**")
-        valence = st.slider("Valence (unpleasant → pleasant)", 0.0, 1.0, 0.6, 0.05)
-        arousal = st.slider("Arousal (calm → excited)", 0.0, 1.0, 0.6, 0.05)
-
-        g1, g2, g3 = st.columns(3)
-        with g1: energy = st.selectbox("Energy", ["low","medium","high"], index=1)
-        with g2: social = st.selectbox("Company", ["solo","group"], index=0)
-        with g3: focus  = st.selectbox("Focus",  ["relax","party","gym","study"], index=0)
-=======
-with st.form("mood_text_rg", clear_on_submit=False):
-    # 1) Free text ONLY
-    txt = st.text_area(
-        "1) In your own words, how do you feel right now?",
-        value=st.session_state.get("vibe_prefill", ""),
-        placeholder="e.g., It's been a long day but I'm hopeful.",
-        height=110,
-    )
-    st.markdown("---")
-
-    # 2) RG 10-item mood quiz ONLY
-    st.caption("ResearchGate 10-item questionnaire")
-    q1 = st.radio("1) I don't feel like doing anything.",  list(OPT), horizontal=True)
-    q2 = st.radio("2) I am feeling bored.",                 list(OPT), horizontal=True)
-    q3 = st.radio("3) Nothing seems fun anymore.",          list(OPT), horizontal=True)
-    q4 = st.radio("4) I find beauty in things around me.",  list(OPT), horizontal=True)
-    q5 = st.radio("5) I feel loved.",                       list(OPT), horizontal=True)
-    q6 = st.radio("6) I’ve been feeling confident.",        list(OPT), horizontal=True)
-    q7 = st.radio("7) My efforts aren’t appreciated.",      list(OPT), horizontal=True)
-    q8 = st.radio("8) I completed today’s agenda.",         list(OPT), horizontal=True)
-    q9 = st.radio("9) I get irritated easily.",             list(OPT), horizontal=True)
-    q10 = st.radio("10) Recently, I have trouble concentrating.", ["No","Yes"], index=0, horizontal=True)
->>>>>>> 067847c4 (change mood detector)
-
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # RIGHT: 10-item mood quiz (+ debug toggle)
+    # RIGHT: 10-item mood quiz
     with st.container():
         st.markdown('<div class="panel">', unsafe_allow_html=True)
         st.markdown('<h3>10-Item Mood Quiz</h3><div class="hint">Optional but improves accuracy</div>', unsafe_allow_html=True)
 
-        q1 = st.radio("1) I don't feel like doing anything.",  list(OPT), horizontal=True)
-        q2 = st.radio("2) I am feeling bored.",                 list(OPT), horizontal=True)
-        q3 = st.radio("3) Nothing seems fun anymore.",          list(OPT), horizontal=True)
-        q4 = st.radio("4) I find beauty in things around me.",  list(OPT), horizontal=True)
-        q5 = st.radio("5) I feel loved.",                       list(OPT), horizontal=True)
-        q6 = st.radio("6) I’ve been feeling confident.",        list(OPT), horizontal=True)
-        q7 = st.radio("7) My efforts aren’t appreciated.",      list(OPT), horizontal=True)
-        q8 = st.radio("8) I completed today’s agenda.",         list(OPT), horizontal=True)
-        q9 = st.radio("9) I get irritated easily.",             list(OPT), horizontal=True)
+        q1  = st.radio("1) I don't feel like doing anything.",  list(OPT), horizontal=True)
+        q2  = st.radio("2) I am feeling bored.",                 list(OPT), horizontal=True)
+        q3  = st.radio("3) Nothing seems fun anymore.",          list(OPT), horizontal=True)
+        q4  = st.radio("4) I find beauty in things around me.",  list(OPT), horizontal=True)
+        q5  = st.radio("5) I feel loved.",                       list(OPT), horizontal=True)
+        q6  = st.radio("6) I’ve been feeling confident.",        list(OPT), horizontal=True)
+        q7  = st.radio("7) My efforts aren’t appreciated.",      list(OPT), horizontal=True)
+        q8  = st.radio("8) I completed today’s agenda.",         list(OPT), horizontal=True)
+        q9  = st.radio("9) I get irritated easily.",             list(OPT), horizontal=True)
         q10 = st.radio("10) Recently, I have trouble concentrating (focus override).", ["No","Yes"], index=0, horizontal=True)
 
         st.markdown('---', unsafe_allow_html=True)
         show_debug = st.checkbox("Show raw JSON", value=False)
-
         st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)  # /twocol
@@ -219,24 +217,28 @@ st.markdown("</div></div>", unsafe_allow_html=True)
 # -----------------------------
 # Actions
 # -----------------------------
-if skip:
+if 'skip' in locals() and skip:
     switch_to_playlist(None)
 
-if go:
-    payload: Dict[str, Any] = {
-        "text": txt or "",
-        "rg_quiz": {
-            "q1": OPT[q1], "q2": OPT[q2], "q3": OPT[q3], "q4": OPT[q4], "q5": OPT[q5],
-            "q6": OPT[q6], "q7": OPT[q7], "q8": OPT[q8], "q9": OPT[q9],
-            "q10": "yes" if q10 == "Yes" else "no",
-        },
-        # No emoji / SAM / other signals
-        # Optionally: if backend supports text_scores, you can add it here later
-    }
+if 'go' in locals() and go:
+    # Build payload safely
+    try:
+        payload: Dict[str, Any] = {
+            "text": (txt or "").strip(),
+            "rg_quiz": {
+                "q1": OPT[q1], "q2": OPT[q2], "q3": OPT[q3], "q4": OPT[q4], "q5": OPT[q5],
+                "q6": OPT[q6], "q7": OPT[q7], "q8": OPT[q8], "q9": OPT[q9],
+                "q10": "yes" if q10 == "Yes" else "no",
+            },
+            "weights": MOOD_WEIGHTS
+        }
+    except KeyError:
+        st.error("Please answer the quiz using the provided options.")
+        st.stop()
 
     with st.status("Analysing mood (text + quiz)…", expanded=True) as s:
         try:
-            r = requests.post(f"{API_BASE}/mood/fuse", headers=HEADERS, json=payload, timeout=20)
+            r = requests.post(f"{API_BASE}/mood/fuse", headers=HEADERS, json=payload, timeout=25)
             # s.write("POST /mood/fuse")
             r.raise_for_status()
             data = r.json()
@@ -250,17 +252,17 @@ if go:
         }
 
         label = (final.get("label") or data.get("mood") or "").strip()
-        conf  = float(
-            final.get("confidence")
-            if final.get("confidence") is not None
-            else (data.get("confidence") or 0.0)
-        )
+        try:
+            conf = float(final.get("confidence") if final.get("confidence") is not None else (data.get("confidence") or 0.0))
+        except Exception:
+            conf = 0.0
+
         # Persist for playlist page
         st.session_state["mood_fuse"] = data
         st.session_state["fused_mood"] = final
         st.session_state["fused_mood_label"] = label
         st.session_state["fused_mood_conf"]  = round(conf, 3)
-        st.session_state["vibe_prefill"]     = txt or ""
+        st.session_state["vibe_prefill"]     = (txt or "").strip()
 
         s.update(label=f"Mood fusion complete • {label or '—'} (conf {conf:.2f})", state="complete", expanded=False)
 
