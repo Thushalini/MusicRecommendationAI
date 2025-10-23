@@ -1,37 +1,40 @@
 from __future__ import annotations
 from typing import Dict, Tuple, List
 
-MOODS = ["happy","chill","angry","sad","workout","sleep", "calm"]
+MOODS: List[str] = ["happy", "chill", "angry", "sad", "workout", "sleep", "calm"]
 
-def _ensure_all_moods(d: Dict[str,float]) -> Dict[str,float]:
+def _ensure_all_moods(d: Dict[str, float]) -> Dict[str, float]:
     out = {m: 0.0 for m in MOODS}
-    for k,v in d.items():
-        if k in out: out[k] = float(v)
+    for k, v in (d or {}).items():
+        if k in out:
+            out[k] = float(v)
     s = sum(out.values()) or 1.0
-    return {k:v/s for k,v in out.items()}
+    return {k: v / s for k, v in out.items()}
 
 def fuse_mood(
-    text_scores: Dict[str,float],
-    color_scores: Dict[str,float] | None = None,
-    emoji_scores: Dict[str,float] | None = None,
-    sam_scores: Dict[str,float] | None = None,
-    quiz_scores: Dict[str,float] | None = None,
-    w_text: float = 0.6, w_color: float = 0.1, w_emoji: float = 0.15,
-    w_sam: float = 0.1, w_quiz: float = 0.05
-) -> Tuple[str, float, Dict[str,float]]:
-    # Normalize/complete
-    ts  = _ensure_all_moods(text_scores)
-    cs  = _ensure_all_moods(color_scores or {})
-    es  = _ensure_all_moods(emoji_scores or {})
-    sams = _ensure_all_moods(sam_scores or {})
-    qs  = _ensure_all_moods(quiz_scores or {})
+    text_scores: Dict[str, float],
+    rg_quiz_scores: Dict[str, float] | None = None,
+    w_text: float = 0.7,
+    w_rg_quiz: float = 0.3,
+) -> Tuple[str, float, Dict[str, float]]:
+    """
+    Fuse mood using only:
+      - text_scores: scores from free-text analysis
+      - rg_quiz_scores: scores from the RG mood quiz (optional)
 
-    # Weighted sum
-    fused = {m: w_text*ts[m] + w_color*cs[m] + w_emoji*es[m] + w_sam*sams[m] + w_quiz*qs[m] for m in MOODS}
+    Weights default to 70% text, 30% quiz. Adjust via w_text / w_rg_quiz.
+    """
+    # Normalize/complete
+    ts = _ensure_all_moods(text_scores)
+    qs = _ensure_all_moods(rg_quiz_scores or {})
+
+    # Weighted sum (only text + RG quiz)
+    fused = {m: w_text * ts[m] + w_rg_quiz * qs[m] for m in MOODS}
+
     # Normalize
-    s = sum(fused.values()) or 1.0
-    fused = {k:v/s for k,v in fused.items()}
+    total = sum(fused.values()) or 1.0
+    fused = {k: v / total for k, v in fused.items()}
 
     label = max(fused, key=fused.get)
-    conf  = fused[label]
+    conf = fused[label]
     return label, conf, fused

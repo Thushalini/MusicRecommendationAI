@@ -12,16 +12,14 @@ from app.genre_classifier import classify_genre as classify_genre_agent
 from app.mood_detector import MODEL_PATH, _PIPELINE as _MOOD_MODEL
 from app.genre_classifier import MODEL_PATH as GENRE_MODEL_PATH
 
-# OPTIONAL fusion helpers (color/emoji/SAM/quiz). Keep try/except to avoid crashes if files are missing.
+# --- Only import RG quiz helper (no other side-signals) -----------------------
 try:
-    from app.mood_fusion import fuse_mood as fuse_mood_helper
-    from app.mood_signals import color_signal, emoji_signal, sam_to_mood, quiz_signal, rg_quiz_signal
-    _HAS_FUSION = True
+    from app.mood_fusion import rg_quiz_signal  # expects {"quiz": {...}} -> {"final":{...},"dist":{...}}
+    _HAS_RG = True
 except Exception:
-    _HAS_FUSION = False
+    _HAS_RG = False
 
-# If you already have a router in app/routes/mood_routes.py that exposes /mood/fuse,
-# you can still include it below. This file also exposes /mood/fuse directly.
+# Router (optional) from app/routes/mood_routes.py
 try:
     from app.routes.mood_routes import router as mood_router
 except Exception:
@@ -47,8 +45,8 @@ def require_api_key(x_api_key: str = Header(default="")):
 # ----------------------------------
 app = FastAPI(
     title="Playlist Builder – NLP Agent API",
-    version="1.1.0",
-    description="NLP helpers: mood/genre + fused mood endpoint for multi-signal inputs."
+    version="1.2.0",
+    description="NLP helpers: mood/genre + fused mood endpoint (TEXT + RG quiz only)."
 )
 
 _default_origins: List[str] = [
@@ -90,27 +88,24 @@ class AnalyzeResponse(BaseModel):
     genre_confidence: Optional[float] = None
 
 class FuseInput(BaseModel):
-    # primary text + optional side-signals
+    """
+    Fused mood input restricted to:
+      - text: primary free-text
+      - rg_quiz: dict of answers from the Russell–Geneva (or similar) 10Q quiz
+    """
     text: Optional[str] = ""
-    color: Optional[str] = None
-    emoji: Optional[str] = None
-    # SAM (Self-Assessment Manikin) style inputs: valence/arousal in [-1..1] or [0..1]
-    valence: Optional[float] = None
-    arousal: Optional[float] = None
-    # quiz: arbitrary dict like {"q1":"A", "q2":3, ...}
-    quiz: Optional[Dict[str, Any]] = None
     rg_quiz: Optional[Dict[str, Any]] = None
 
 class FuseResponse(BaseModel):
     mood: str
     confidence: float
-    parts: Dict[str, Any]  # per-signal scores/contributions
+    parts: Dict[str, Any]  # {"text":{...}, "rg_quiz":{...}, "rg_quiz_final":{...}}
 
 # ----------------------------------
 # Routers
 # ----------------------------------
 if mood_router:
-    # protect your existing mood routes (including any /mood/fuse already defined there)
+    # (kept) protects any existing routes in app/routes/mood_routes.py
     app.include_router(mood_router, dependencies=[Depends(require_api_key)])
 
 # Utility routes
@@ -231,19 +226,26 @@ def api_analyze(inp: TextInput):
     )
 
 # ----------------------------------
-# FUSED MOOD: /mood/fuse (text + optional signals)
+# FUSED MOOD (TEXT + RG_QUIZ ONLY)
 # ----------------------------------
 @app.post("/mood/fuse", response_model=FuseResponse, dependencies=[Depends(require_api_key)])
 def api_mood_fuse(inp: FuseInput):
     """
-    Accepts text plus optional {color, emoji, valence, arousal, quiz, rg_quiz} and returns a fused mood.
+    Accepts text PLUS/OR an RG quiz, and returns a fused mood.
+    Rules:
+      - If RG quiz present and valid -> RG label is PRIMARY.
+      - If both present -> return RG as final; raise confidence if both agree.
+      - If only text present -> return text mood.
     """
-    if (inp.text is None or not str(inp.text).strip()) and not any([inp.color, inp.emoji, inp.valence, inp.arousal, inp.quiz, inp.rg_quiz]):
-        raise HTTPException(status_code=400, detail="Provide at least text or one side-signal (color/emoji/SAM/quiz/RG quiz).")
+    has_text = bool((inp.text or "").strip())
+    has_rg   = bool(getattr(inp, "rg_quiz", None))
 
-    # --- 1) TEXT signal --------------------------------------------------------
+    if not has_text and not has_rg:
+        raise HTTPException(status_code=400, detail="Provide at least 'text' or 'rg_quiz'.")
+
+    # --- TEXT signal -----------------------------------------------------------
     text_label, text_conf, text_scores = "unknown", 0.5, {}
-    if inp.text:
+    if has_text:
         m_raw = detect_mood_agent(str(inp.text).strip())
         if isinstance(m_raw, (list, tuple)):
             text_label = str(m_raw[0]) if len(m_raw) > 0 else "unknown"
@@ -257,84 +259,37 @@ def api_mood_fuse(inp: FuseInput):
         else:
             text_label, text_conf = str(m_raw), 0.5
 
-    # --- 2) SIDE SIGNALS -------------------------------------------------------
-    color_scores = {}
-    emoji_scores = {}
-    sam_scores   = {}
-    quiz_scores  = {}   # tiny 3Q quiz → dist over MOODS
-    rg_dist      = {}   # RG 10Q quiz → dist over MOODS
-    rg_final     = None # {"label","x","y","confidence","method":"quiz_rg"}
-
-    if _HAS_FUSION:
-        if inp.color:
-            try: color_scores = color_signal(inp.color)
-            except Exception: color_scores = {}
-
-        if inp.emoji:
-            try: emoji_scores = emoji_signal(inp.emoji)
-            except Exception: emoji_scores = {}
-
-        if inp.valence is not None and inp.arousal is not None:
-            try: sam_scores = sam_to_mood(float(inp.valence), float(inp.arousal))
-            except Exception: sam_scores = {}
-
-        if inp.quiz:
-            try: quiz_scores = quiz_signal(dict(inp.quiz))
-            except Exception: quiz_scores = {}
-
-        # NEW: RG quiz (primary)
-        if getattr(inp, "rg_quiz", None):
-            try:
-                out = rg_quiz_signal({"quiz": dict(inp.rg_quiz)})
-                rg_final = out.get("final")
-                rg_dist  = out.get("dist", {})
-            except Exception:
-                rg_final, rg_dist = None, {}
-
-    # --- 3) FUSE ---------------------------------------------------------------
-    if _HAS_FUSION:
+    # --- RG QUIZ signal --------------------------------------------------------
+    rg_dist: Dict[str, float] = {}
+    rg_final: Optional[Dict[str, Any]] = None
+    if has_rg and _HAS_RG:
         try:
-            # Pass RG distribution as an extra channel (if your fuser supports kwargs, add it).
-            fused = fuse_mood_helper(
-                text_scores=text_scores or {text_label: text_conf},
-                color_scores=color_scores,
-                emoji_scores=emoji_scores,
-                sam_scores=sam_scores,
-                quiz_scores=quiz_scores,
-                rg_quiz_scores=rg_dist,  # safe to pass empty {}
-            )
-
-            if isinstance(fused, (list, tuple)) and len(fused) >= 2:
-                final_label = str(fused[0]); final_conf = float(fused[1])
-                parts = fused[2] if len(fused) > 2 and isinstance(fused[2], dict) else {
-                    "text": text_scores, "color": color_scores, "emoji": emoji_scores,
-                    "sam": sam_scores, "quiz": quiz_scores, "rg_quiz": rg_dist
-                }
-            elif isinstance(fused, dict):
-                final_label = str(fused.get("label", text_label))
-                final_conf  = float(fused.get("confidence", text_conf))
-                parts = dict(fused.get("parts", {
-                    "text": text_scores, "color": color_scores, "emoji": emoji_scores,
-                    "sam": sam_scores, "quiz": quiz_scores, "rg_quiz": rg_dist
-                }))
-            else:
-                final_label, final_conf = text_label, text_conf
-                parts = {"text": text_scores}
+            out = rg_quiz_signal({"quiz": dict(inp.rg_quiz)})
+            rg_final = out.get("final")
+            rg_dist  = out.get("dist", {}) or {}
         except Exception:
-            final_label, final_conf = text_label, text_conf
-            parts = {"text": text_scores}
-    else:
-        final_label, final_conf = text_label, text_conf
-        parts = {"text": text_scores}
+            rg_final, rg_dist = None, {}
 
-    # --- 4) Prefer RG quiz as primary label if present -------------------------
+    # --- FUSION LOGIC ----------------------------------------------------------
+    # Priority: RG quiz if present and produced a label; otherwise fall back to TEXT
+    final_label, final_conf = text_label, text_conf
+    parts: Dict[str, Any] = {"text": text_scores}
     if rg_final and isinstance(rg_final, dict):
         rg_label = str(rg_final.get("label", "") or "").strip()
         rg_conf  = float(rg_final.get("confidence", 0.9))
-        if rg_label:
-            # Override to ensure RG is the main method
-            final_label = rg_label
-            final_conf  = max(final_conf, rg_conf)
-            parts["rg_quiz_final"] = rg_final
+        parts["rg_quiz"] = rg_dist
+        parts["rg_quiz_final"] = rg_final
 
-    return FuseResponse(mood=final_label, confidence=final_conf, parts=parts)
+        if rg_label:
+            final_label = rg_label
+            # If both present and agree, boost confidence slightly
+            if has_text and text_label.lower() == rg_label.lower():
+                final_conf = min(1.0, max(rg_conf, text_conf) + 0.05)
+            else:
+                final_conf = max(rg_conf, text_conf)
+    else:
+        # no valid RG outcome → ensure parts still reflect attempt if provided
+        if has_rg:
+            parts["rg_quiz"] = rg_dist  # may be empty
+
+    return FuseResponse(mood=final_label, confidence=float(final_conf), parts=parts)
