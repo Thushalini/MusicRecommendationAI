@@ -19,7 +19,7 @@ It generates personalized Spotify playlists based on **mood, genre, and context*
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-repo/playList-Builder.git
+   git clone https://github.com/Music RecommendationAI/playList-Builder.git
    cd playList-Builder
    ```
 
